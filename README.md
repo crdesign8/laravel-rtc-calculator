@@ -119,13 +119,15 @@ return [
 
 ## 🤝 Contribuindo
 
-Contribuições são muito bem-vindas! Este pacote é feito pela comunidade Laravel brasileira.
+Contribuições são muito bem-vindas! Se você encontrou um bug, tem uma sugestão ou quer adicionar uma funcionalidade, a forma mais simples de contribuir é **abrindo uma issue** no repositório.
+
+Para contribuições de código:
 
 1. Fork o repositório
 2. Crie sua branch: `git checkout -b feature/minha-feature`
 3. Commit: `git commit -m 'feat: minha feature'`
 4. Push: `git push origin feature/minha-feature`
-5. Abra um Pull Request
+5. Abra um Pull Request descrevendo o que foi alterado e por quê
 
 ---
 
