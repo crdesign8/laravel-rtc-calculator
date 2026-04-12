@@ -77,4 +77,39 @@ class CalculoRequestDTO
     {
         return $this->itens;
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Fluent factory
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Cria um CalculoRequestDTO de forma fluente.
+     *
+     * Exemplo:
+     *   CalculoRequestDTO::make(
+     *       municipio: 4314902,
+     *       uf: 'RS',
+     *       itens: [$item1, $item2],
+     *       dataHoraEmissao: '2027-01-01T03:00:00-03:00',
+     *   )
+     *
+     * @param  ItemDTO[]  $itens
+     */
+    public static function make(
+        int $municipio,
+        string $uf,
+        array $itens = [],
+        ?string $dataHoraEmissao = null,
+        ?string $id = null,
+        string $versao = '1.0.0',
+    ): self {
+        return new self(
+            id:               $id ?? \Illuminate\Support\Str::uuid()->toString(),
+            versao:           $versao,
+            dataHoraEmissao:  $dataHoraEmissao ?? now()->toIso8601String(),
+            municipio:        $municipio,
+            uf:               Uf::from(strtoupper($uf)),
+            itens:            $itens,
+        );
+    }
 }

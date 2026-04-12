@@ -112,7 +112,7 @@ class Rtc
     {
         $dto = $this->buildDto();
 
-        return $this->executarCalculo($dto);
+        return (new CalcularTributosAction($this->client))->handle($dto);
     }
 
     // -----------------------------------------------------------------------
@@ -127,7 +127,7 @@ class Rtc
      */
     public function executarCalculo(CalculoRequestDTO $dto): CalculoResult
     {
-        return app(CalcularTributosAction::class)->handle($dto);
+        return (new CalcularTributosAction($this->client))->handle($dto);
     }
 
     /**
@@ -139,7 +139,7 @@ class Rtc
      */
     public function gerarXml(CalculoResult $result, TipoDocumento $tipo = TipoDocumento::NFe): string
     {
-        return app(GerarXmlRtcAction::class)->handle($result, $tipo);
+        return (new GerarXmlRtcAction($this->client))->handle($result, $tipo);
     }
 
     /**
@@ -150,7 +150,7 @@ class Rtc
      */
     public function validarXml(string $xml): bool
     {
-        return app(ValidarXmlRtcAction::class)->handle($xml);
+        return (new ValidarXmlRtcAction($this->client))->handle($xml);
     }
 
     /**
@@ -162,7 +162,7 @@ class Rtc
      */
     public function injetarNfe(string $xmlRtc, string $xmlNfe): string
     {
-        return app(InjetarXmlNfeAction::class)->handle($xmlRtc, $xmlNfe);
+        return (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
     }
 
     // -----------------------------------------------------------------------
