@@ -156,7 +156,30 @@ return [
 
 ---
 
-## 🤝 Contribuindo
+## � Exemplos Executáveis
+
+A pasta [`examples/`](examples/) contém scripts standalone que funcionam sem uma aplicação Laravel completa — apenas `composer install` e a calculadora Java rodando:
+
+```bash
+# Pré-requisito: calculadora Java em http://localhost:8080
+
+# 1. Cálculo de tributos (IS + IBS + CBS) com tabela formatada
+php examples/01-calcular-tributos.php
+
+# 2. Geração do XML com grupos IS/IBSCBS/ISTot/IBSCBSTot
+php examples/02-gerar-xml-rtc.php
+
+# 3. Fluxo completo: calcular → gerar XML → injetar em uma NFe real
+php examples/03-fluxo-completo-nfe.php
+```
+
+Os arquivos gerados são salvos em `examples/output/` (pasta ignorada pelo Git).
+
+> Para usar uma URL diferente: `RTC_BASE_URL=http://meu-servidor:9090 php examples/01-calcular-tributos.php`
+
+---
+
+## �🤝 Contribuindo
 
 Contribuições são muito bem-vindas! Se você encontrou um bug, tem uma sugestão ou quer adicionar uma funcionalidade, a forma mais simples de contribuir é **abrindo uma issue** no repositório.
 

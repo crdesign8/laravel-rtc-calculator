@@ -11,3 +11,5 @@ coverage/
 .php-cs-fixer.cache
 implementation_plan.md
 mago
+/examples/output/*.xml
+/examples/output/*.json
