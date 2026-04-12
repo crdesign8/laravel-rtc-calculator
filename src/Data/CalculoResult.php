@@ -5,37 +5,39 @@ namespace Crdesign8\LaravelRtcCalculator\Data;
 /**
  * Representa o resultado completo de um cálculo RTC.
  *
- * @note Os campos tipados e os acessores específicos serão definidos no Milestone 4,
- *       após análise do JSON de saída do endpoint /regime-geral.
+ * Estrutura real do endpoint POST /api/calculadora/regime-geral:
+ * {
+ *   "objetos": [ { "nObj": 1, "tribCalc": { "IS": {...}, "IBSCBS": {...} } } ],
+ *   "total":   { "tribCalc": { "ISTot": {...}, "IBSCBSTot": {...} } }
+ * }
+ *
+ * O array raw é preservado integralmente para ser reenviado ao endpoint
+ * POST /api/calculadora/xml/generate sem transformações.
  */
 class CalculoResult
 {
     /**
-     * @param  ItemResult[]  $itens
+     * @param  ItemResult[]  $objetos
      */
     public function __construct(
-        private string $id,
-        private string $versao,
-        private array $itens,
-        private TotaisResult $totais,
+        private array $objetos,
+        private TotaisResult $total,
         private array $raw,
     ) {}
 
     public static function fromArray(array $data): self
     {
-        $itens = array_map(
+        $objetos = array_map(
             fn (array $item) => ItemResult::fromArray($item),
-            $data['itens'] ?? [],
+            $data['objetos'] ?? [],
         );
 
-        $totais = TotaisResult::fromArray($data['totais'] ?? []);
+        $total = TotaisResult::fromArray($data['total'] ?? []);
 
         return new self(
-            id:     $data['id'] ?? '',
-            versao: $data['versao'] ?? '',
-            itens:  $itens,
-            totais: $totais,
-            raw:    $data,
+            objetos: $objetos,
+            total:   $total,
+            raw:     $data,
         );
     }
 
@@ -49,26 +51,29 @@ class CalculoResult
         return json_encode($this->raw, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
-    public function getId(): string
-    {
-        return $this->id;
-    }
-
-    public function getVersao(): string
-    {
-        return $this->versao;
-    }
-
     /**
      * @return ItemResult[]
      */
-    public function getItens(): array
+    public function getObjetos(): array
     {
-        return $this->itens;
+        return $this->objetos;
     }
 
-    public function getTotais(): TotaisResult
+    public function getTotal(): TotaisResult
     {
-        return $this->totais;
+        return $this->total;
+    }
+
+    /** Atalho: retorna o ItemResult de um item pelo número (nObj) */
+    public function getItem(int $nObj): ?ItemResult
+    {
+        foreach ($this->objetos as $item) {
+            if ($item->getNObj() === $nObj) {
+                return $item;
+            }
+        }
+
+        return null;
     }
 }
+

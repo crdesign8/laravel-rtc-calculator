@@ -1,0 +1,85 @@
+{
+    "objetos": [
+        {
+            "nObj": 1,
+            "tribCalc": {
+                "IS": {
+                    "CSTIS": "000",
+                    "cClassTribIS": "000001",
+                    "vBCIS": "1111.00",
+                    "pIS": "13.00",
+                    "pISEspec": "21.30",
+                    "uTrib": "VN",
+                    "qTrib": "222",
+                    "vIS": "0.00",
+                    "memoriaCalculo": "Opera\u00e7\u00e3o de consumo sujeita \u00e0 tributa\u00e7\u00e3o pelo Imposto Seletivo, com enquadramento legal em Art. 412, I, tributada conforme Tributa\u00e7\u00e3o pelo Imposto Seletivo - Com C\u00e1lculo. A base de c\u00e1lculo utilizada \u00e9 de R$ 1111, com al\u00edquota ad valorem de 13.000000%. A al\u00edquota ad rem \u00e9 de 21.3."
+                },
+                "IBSCBS": {
+                    "CST": "550",
+                    "cClassTrib": "550020",
+                    "gIBSCBS": {
+                        "vBC": "5984.03",
+                        "gIBSUF": {
+                            "pIBSUF": "0.05",
+                            "vIBSUF": "0.00",
+                            "memoriaCalculo": "Opera\u00e7\u00e3o de consumo com enquadramento legal em Art. 461, tributada conforme Suspens\u00e3o. A base de c\u00e1lculo utilizada \u00e9 de R$ 5984.03, sendo que esta opera\u00e7\u00e3o n\u00e3o possui al\u00edquota."
+                        },
+                        "gIBSMun": {
+                            "pIBSMun": "0.05",
+                            "vIBSMun": "0.00",
+                            "memoriaCalculo": "Opera\u00e7\u00e3o de consumo com enquadramento legal em Art. 461, tributada conforme Suspens\u00e3o. A base de c\u00e1lculo utilizada \u00e9 de R$ 5984.03, sendo que esta opera\u00e7\u00e3o n\u00e3o possui al\u00edquota."
+                        },
+                        "vIBS": "0.00",
+                        "gCBS": {
+                            "pCBS": "8.40",
+                            "vCBS": "0.00",
+                            "memoriaCalculo": "Opera\u00e7\u00e3o de consumo com enquadramento legal em Art. 461, tributada conforme Suspens\u00e3o. A base de c\u00e1lculo utilizada \u00e9 de R$ 5984.03, sendo que esta opera\u00e7\u00e3o n\u00e3o possui al\u00edquota."
+                        },
+                        "gTribRegular": {
+                            "CSTReg": "200",
+                            "cClassTribReg": "200032",
+                            "pAliqEfetRegIBSUF": "0.02",
+                            "vTribRegIBSUF": "1.20",
+                            "pAliqEfetRegIBSMun": "0.02",
+                            "vTribRegIBSMun": "1.20",
+                            "pAliqEfetRegCBS": "3.36",
+                            "vTribRegCBS": "201.06"
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "total": {
+        "tribCalc": {
+            "ISTot": {
+                "vIS": "0.00"
+            },
+            "IBSCBSTot": {
+                "vBCIBSCBS": "5984.03",
+                "gIBS": {
+                    "gIBSUF": {
+                        "vDif": "0.00",
+                        "vDevTrib": "0.00",
+                        "vIBSUF": "0.00"
+                    },
+                    "gIBSMun": {
+                        "vDif": "0.00",
+                        "vDevTrib": "0.00",
+                        "vIBSMun": "0.00"
+                    },
+                    "vIBS": "0.00",
+                    "vCredPres": "0.00",
+                    "vCredPresCondSus": "0.00"
+                },
+                "gCBS": {
+                    "vDif": "0.00",
+                    "vDevTrib": "0.00",
+                    "vCBS": "0.00",
+                    "vCredPres": "0.00",
+                    "vCredPresCondSus": "0.00"
+                }
+            }
+        }
+    }
+}
