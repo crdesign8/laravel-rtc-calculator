@@ -77,7 +77,15 @@ $resultado = Rtc::make()
     )
     ->calcular();
 
-echo $resultado->id;
+// Acessa os totais calculados
+echo $resultado->getTotal()->getVIsTot();      // Imposto Seletivo total
+echo $resultado->getTotal()->getVBcIbsCbs();  // Base de cálculo IBS+CBS
+echo $resultado->getTotal()->getVCbsTot();    // CBS total
+
+// Acessa um item específico pelo número
+$item = $resultado->getItem(1);
+echo $item->getCstIs();    // CST do Imposto Seletivo
+echo $item->getVIs();      // Valor do IS
 ```
 
 ### Gerar e Injetar XML na NFe
@@ -93,6 +101,37 @@ $nfeComRtc = Rtc::make()->injetarNfe(
 );
 
 file_put_contents('nfe-com-rtc.xml', $nfeComRtc);
+```
+
+---
+
+## 🖥️ Comandos Artisan
+
+### Calcular tributos a partir de um arquivo JSON
+
+```bash
+php artisan rtc:calcular entrada.json
+
+# Salvar o resultado em arquivo
+php artisan rtc:calcular entrada.json --saida=resultado.json
+```
+
+### Injetar grupos RTC em uma NFe existente
+
+```bash
+php artisan rtc:injetar nfe-sem-rtc.xml resultado.json nfe-com-rtc.xml
+
+# Para CTe ou NFCe
+php artisan rtc:injetar nota.xml resultado.json nota-com-rtc.xml --tipo=CTe
+```
+
+### Verificar se a calculadora Java está rodando
+
+```bash
+php artisan rtc:healthcheck
+
+# Testar uma URL diferente da configurada
+php artisan rtc:healthcheck --url=http://meu-servidor:8080
 ```
 
 ---
