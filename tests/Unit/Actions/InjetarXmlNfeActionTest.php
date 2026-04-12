@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Tests\Unit\Actions;
 
+use Crdesign8\LaravelRtcCalculator\Actions\InjetarXmlNfeAction;
+use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use DOMDocument;
 use DOMXPath;
 use PHPUnit\Framework\TestCase;
-use Crdesign8\LaravelRtcCalculator\Actions\InjetarXmlNfeAction;
-use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 
 class InjetarXmlNfeActionTest extends TestCase
 {
@@ -15,8 +17,8 @@ class InjetarXmlNfeActionTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->xmlRtc = file_get_contents(__DIR__.'/../../Fixtures/saida-gerar-xml.xml');
-        $this->xmlNfe = file_get_contents(__DIR__.'/../../Fixtures/nfe-sem-rtc.xml');
+        $this->xmlRtc = file_get_contents(__DIR__ . '/../../Fixtures/saida-gerar-xml.xml');
+        $this->xmlNfe = file_get_contents(__DIR__ . '/../../Fixtures/nfe-sem-rtc.xml');
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -47,10 +49,10 @@ class InjetarXmlNfeActionTest extends TestCase
     {
         $result = (new InjetarXmlNfeAction())->handle($this->xmlRtc, $this->xmlNfe);
 
-        $xpath  = $this->xpathFrom($result);
-        $cstIs  = $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IS/nfe:CSTIS)');
-        $vBcIs  = $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IS/nfe:vBCIS)');
-        $vIs    = $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IS/nfe:vIS)');
+        $xpath = $this->xpathFrom($result);
+        $cstIs = $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IS/nfe:CSTIS)');
+        $vBcIs = $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IS/nfe:vBCIS)');
+        $vIs = $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IS/nfe:vIS)');
 
         $this->assertSame('000', $cstIs);
         $this->assertSame('1111.00', $vBcIs);
@@ -100,7 +102,7 @@ class InjetarXmlNfeActionTest extends TestCase
             }
         }
 
-        $isTotPos  = array_search('ISTot', $children);
+        $isTotPos = array_search('ISTot', $children);
         $vNfTotPos = array_search('vNFTot', $children);
 
         $this->assertNotFalse($isTotPos, '<ISTot> deve estar presente em <total>');
@@ -128,7 +130,7 @@ class InjetarXmlNfeActionTest extends TestCase
         }
 
         $ibscbsTotPos = array_search('IBSCBSTot', $children);
-        $vNfTotPos    = array_search('vNFTot', $children);
+        $vNfTotPos = array_search('vNFTot', $children);
 
         $this->assertNotFalse($ibscbsTotPos, '<IBSCBSTot> deve estar presente em <total>');
 
@@ -142,7 +144,10 @@ class InjetarXmlNfeActionTest extends TestCase
         $result = (new InjetarXmlNfeAction())->handle($this->xmlRtc, $this->xmlNfe);
 
         $doc = new DOMDocument();
-        $loaded = @$doc->loadXML($result);
+        libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($result);
+        libxml_clear_errors();
+        libxml_use_internal_errors(false);
 
         $this->assertTrue($loaded, 'Resultado deve ser XML sintáticamente válido');
     }

@@ -76,7 +76,7 @@ class CalcularPorNfeXmlAction
      */
     public function handle(string $xmlNfe, array $rtcPorItem, string $versao = '1.0.0'): CalculoResult
     {
-        $doc = new DOMDocument();
+        $doc = new DOMDocument;
 
         $previous = libxml_use_internal_errors(true);
         $loaded = $doc->loadXML($xmlNfe);
@@ -84,9 +84,9 @@ class CalcularPorNfeXmlAction
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
-        if (!$loaded || !empty($xmlErrors)) {
-            $messages = array_map(fn($e) => trim($e->message), $xmlErrors);
-            throw new RtcValidationException('XML da NFe inválido ou malformado: ' . implode('; ', $messages));
+        if (! $loaded || $xmlErrors !== []) {
+            $messages = array_map(static fn ($e) => trim($e->message), $xmlErrors);
+            throw new RtcValidationException('XML da NFe inválido ou malformado: '.implode('; ', $messages));
         }
 
         $xpath = new DOMXPath($doc);
@@ -99,7 +99,7 @@ class CalcularPorNfeXmlAction
 
         if ($municipio === 0 || $uf === '' || $dhEmi === '') {
             throw new RtcValidationException('Não foi possível extrair municipio (<cMunFG>), UF (<UF>) ou '
-            . 'data de emissão (<dhEmi>) do XML da NFe.');
+            .'data de emissão (<dhEmi>) do XML da NFe.');
         }
 
         $detNodes = $xpath->query('//nfe:det');
@@ -111,64 +111,11 @@ class CalcularPorNfeXmlAction
         $itens = [];
 
         foreach ($detNodes as $det) {
-            if (!$det instanceof \DOMElement) {
+            if (! $det instanceof \DOMElement) {
                 continue;
             }
 
-            $nItem = (int) $det->getAttribute('nItem');
-
-            if (!isset($rtcPorItem[$nItem])) {
-                throw new RtcValidationException(
-                    "Dados RTC para o item nItem={$nItem} não fornecidos em \$rtcPorItem. "
-                    . 'Informe pelo menos os campos "cst" e "cClassTrib".',
-                );
-            }
-
-            $rtc = $rtcPorItem[$nItem];
-
-            if (empty($rtc['cst']) || empty($rtc['cClassTrib'])) { // empty verifica string vazia e null
-                throw new RtcValidationException(
-                    "Os campos \"cst\" e \"cClassTrib\" são obrigatórios em \$rtcPorItem[{$nItem}].",
-                );
-            }
-
-            $ncm = (string) $xpath->evaluate('string(nfe:prod/nfe:NCM)', $det);
-            $quantidade = (float) $xpath->evaluate('string(nfe:prod/nfe:qCom)', $det);
-            $uNfe = strtoupper((string) $xpath->evaluate('string(nfe:prod/nfe:uCom)', $det));
-            $baseCalculo = (float) $xpath->evaluate('string(nfe:prod/nfe:vProd)', $det);
-
-            // Mapeia a unidade NFe → UnidadeMedida RTC
-            // 1. Aliases explícitos (ex: LT → L, TON → T)
-            // 2. Correspondência direta com os casos do enum (ex: KG, G, L…)
-            // 3. Fallback: VN (unidade/cada)
-            $uRtc = self::UNIDADE_MAP[$uNfe] ?? $uNfe;
-            $unidade = UnidadeMedida::tryFrom($uRtc) ?? UnidadeMedida::VN;
-
-            $item = ItemDTO::make($nItem)
-                ->ncm($ncm)
-                ->quantidade($quantidade)
-                ->unidade($unidade) // já é UnidadeMedida — sem round-trip enum→string→enum
-                ->cst($rtc['cst'])
-                ->baseCalculo($baseCalculo)
-                ->cClassTrib($rtc['cClassTrib']);
-
-            if (isset($rtc['tributacaoRegular'])) {
-                $item->tributacaoRegular($rtc['tributacaoRegular']['cst'], $rtc['tributacaoRegular']['cClassTrib']);
-            }
-
-            if (isset($rtc['impostoSeletivo'])) {
-                $is = $rtc['impostoSeletivo'];
-                $item->impostoSeletivo(
-                    cst: $is['cst'],
-                    baseCalculo: (float) $is['baseCalculo'],
-                    cClassTrib: $is['cClassTrib'],
-                    unidade: UnidadeMedida::from($is['unidade']),
-                    quantidade: (float) $is['quantidade'],
-                    impostoInformado: (float) ($is['impostoInformado'] ?? 0),
-                );
-            }
-
-            $itens[] = $item;
+            $itens[] = $this->processarDetItem($det, $xpath, $rtcPorItem);
         }
 
         $dto = CalculoRequestDTO::make(
@@ -179,6 +126,67 @@ class CalcularPorNfeXmlAction
             versao: $versao,
         );
 
-        return new CalcularTributosAction($this->client)->handle($dto);
+        return (new CalcularTributosAction($this->client))->handle($dto);
+    }
+
+    /**
+     * Extrai dados de um elemento <det> e constrói o ItemDTO correspondente.
+     *
+     * @param  array<int, array{cst: string, cClassTrib: string, ...}>  $rtcPorItem
+     *
+     * @throws RtcValidationException
+     */
+    private function processarDetItem(\DOMElement $det, DOMXPath $xpath, array $rtcPorItem): ItemDTO
+    {
+        $nItem = (int) $det->getAttribute('nItem');
+
+        if (! array_key_exists($nItem, $rtcPorItem)) {
+            throw new RtcValidationException(
+                "Dados RTC para o item nItem={$nItem} não fornecidos em \$rtcPorItem. "
+                .'Informe pelo menos os campos "cst" e "cClassTrib".',
+            );
+        }
+
+        $rtc = $rtcPorItem[$nItem];
+
+        if (($rtc['cst'] ?? '') === '' || ($rtc['cClassTrib'] ?? '') === '') {
+            throw new RtcValidationException(
+                "Os campos \"cst\" e \"cClassTrib\" são obrigatórios em \$rtcPorItem[{$nItem}].",
+            );
+        }
+
+        $ncm = (string) $xpath->evaluate('string(nfe:prod/nfe:NCM)', $det);
+        $quantidade = (float) $xpath->evaluate('string(nfe:prod/nfe:qCom)', $det);
+        $uNfe = strtoupper((string) $xpath->evaluate('string(nfe:prod/nfe:uCom)', $det));
+        $baseCalculo = (float) $xpath->evaluate('string(nfe:prod/nfe:vProd)', $det);
+
+        $uRtc = self::UNIDADE_MAP[$uNfe] ?? $uNfe;
+        $unidade = UnidadeMedida::tryFrom($uRtc) ?? UnidadeMedida::VN;
+
+        $item = ItemDTO::make($nItem)
+            ->ncm($ncm)
+            ->quantidade($quantidade)
+            ->unidade($unidade)
+            ->cst($rtc['cst'])
+            ->baseCalculo($baseCalculo)
+            ->cClassTrib($rtc['cClassTrib']);
+
+        if (array_key_exists('tributacaoRegular', $rtc)) {
+            $item->tributacaoRegular($rtc['tributacaoRegular']['cst'], $rtc['tributacaoRegular']['cClassTrib']);
+        }
+
+        if (array_key_exists('impostoSeletivo', $rtc)) {
+            $is = $rtc['impostoSeletivo'];
+            $item->impostoSeletivo(
+                cst: $is['cst'],
+                baseCalculo: (float) $is['baseCalculo'],
+                cClassTrib: $is['cClassTrib'],
+                unidade: UnidadeMedida::from($is['unidade']),
+                quantidade: (float) $is['quantidade'],
+                impostoInformado: (float) ($is['impostoInformado'] ?? 0),
+            );
+        }
+
+        return $item;
     }
 }

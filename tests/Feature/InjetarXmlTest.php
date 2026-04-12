@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Tests\Feature;
 
+use Crdesign8\LaravelRtcCalculator\Actions\InjetarXmlNfeAction;
+use Crdesign8\LaravelRtcCalculator\Tests\TestCase;
 use DOMDocument;
 use DOMXPath;
-use Crdesign8\LaravelRtcCalculator\Tests\TestCase;
-use Crdesign8\LaravelRtcCalculator\Actions\InjetarXmlNfeAction;
 
 class InjetarXmlTest extends TestCase
 {
@@ -15,8 +17,8 @@ class InjetarXmlTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->xmlRtc = file_get_contents(__DIR__.'/../Fixtures/saida-gerar-xml.xml');
-        $this->xmlNfe = file_get_contents(__DIR__.'/../Fixtures/nfe-sem-rtc.xml');
+        $this->xmlRtc = file_get_contents(__DIR__ . '/../Fixtures/saida-gerar-xml.xml');
+        $this->xmlNfe = file_get_contents(__DIR__ . '/../Fixtures/nfe-sem-rtc.xml');
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -27,8 +29,11 @@ class InjetarXmlTest extends TestCase
     {
         $result = (new InjetarXmlNfeAction())->handle($this->xmlRtc, $this->xmlNfe);
 
-        $doc    = new DOMDocument();
-        $loaded = @$doc->loadXML($result);
+        $doc = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($result);
+        libxml_clear_errors();
+        libxml_use_internal_errors(false);
 
         $this->assertTrue($loaded, 'O XML resultante deve ser sintáticamente válido');
     }
@@ -70,7 +75,10 @@ class InjetarXmlTest extends TestCase
         $xpath = $this->xpathFrom($result);
 
         $this->assertSame('550', $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IBSCBS/nfe:CST)'));
-        $this->assertSame('5984.03', $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IBSCBS/nfe:gIBSCBS/nfe:vBC)'));
+        $this->assertSame(
+            '5984.03',
+            $xpath->evaluate('string(//nfe:det[@nItem="1"]/nfe:imposto/nfe:IBSCBS/nfe:gIBSCBS/nfe:vBC)'),
+        );
     }
 
     public function test_valores_istot_corretos_apos_injecao(): void

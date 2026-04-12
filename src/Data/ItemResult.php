@@ -68,27 +68,27 @@ class ItemResult
 
     public function getCstIs(): string
     {
-        return (string) ($this->is['CSTIS'] ?? '');
+        return $this->getIsField('CSTIS');
     }
 
     public function getVBcIs(): string
     {
-        return (string) ($this->is['vBCIS'] ?? '0.00');
+        return $this->getIsField('vBCIS', '0.00');
     }
 
     public function getPIs(): string
     {
-        return (string) ($this->is['pIS'] ?? '0.00');
+        return $this->getIsField('pIS', '0.00');
     }
 
     public function getVIs(): string
     {
-        return (string) ($this->is['vIS'] ?? '0.00');
+        return $this->getIsField('vIS', '0.00');
     }
 
     public function getMemoriaCalculoIs(): string
     {
-        return (string) ($this->is['memoriaCalculo'] ?? '');
+        return $this->getIsField('memoriaCalculo');
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -103,37 +103,69 @@ class ItemResult
 
     public function getCstIbsCbs(): string
     {
-        return (string) ($this->ibsCbs['CST'] ?? '');
+        return $this->getIbsCbsField('CST');
     }
 
     public function getVBcIbsCbs(): string
     {
-        return (string) ($this->ibsCbs['gIBSCBS']['vBC'] ?? '0.00');
+        return $this->getIbsCbsNestedField(['gIBSCBS', 'vBC'], '0.00');
     }
 
     public function getVIbs(): string
     {
-        return (string) ($this->ibsCbs['gIBSCBS']['vIBS'] ?? '0.00');
+        return $this->getIbsCbsNestedField(['gIBSCBS', 'vIBS'], '0.00');
     }
 
     public function getVIbsUf(): string
     {
-        return (string) ($this->ibsCbs['gIBSCBS']['gIBSUF']['vIBSUF'] ?? '0.00');
+        return $this->getIbsCbsNestedField(['gIBSCBS', 'gIBSUF', 'vIBSUF'], '0.00');
     }
 
     public function getVIbsMun(): string
     {
-        return (string) ($this->ibsCbs['gIBSCBS']['gIBSMun']['vIBSMun'] ?? '0.00');
+        return $this->getIbsCbsNestedField(['gIBSCBS', 'gIBSMun', 'vIBSMun'], '0.00');
     }
 
     public function getVCbs(): string
     {
-        return (string) ($this->ibsCbs['gIBSCBS']['gCBS']['vCBS'] ?? '0.00');
+        return $this->getIbsCbsNestedField(['gIBSCBS', 'gCBS', 'vCBS'], '0.00');
     }
 
     /** Bloco gTribRegular como array (pode ser null se CST não tiver tributação regular) */
     public function getTribRegular(): ?array
     {
         return $this->ibsCbs['gIBSCBS']['gTribRegular'] ?? null;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Helpers internos
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private function getIsField(string $key, string $default = ''): string
+    {
+        return (string) ($this->is[$key] ?? $default);
+    }
+
+    private function getIbsCbsField(string $key, string $default = ''): string
+    {
+        return (string) ($this->ibsCbs[$key] ?? $default);
+    }
+
+    /**
+     * @param  string[]  $keys  Caminho de chaves para acesso aninhado
+     */
+    private function getIbsCbsNestedField(array $keys, string $default = ''): string
+    {
+        $node = $this->ibsCbs;
+
+        foreach ($keys as $key) {
+            if (!is_array($node) || !array_key_exists($key, $node)) {
+                return $default;
+            }
+
+            $node = $node[$key];
+        }
+
+        return (string) $node;
     }
 }

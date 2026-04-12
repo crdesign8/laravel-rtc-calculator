@@ -29,7 +29,7 @@ class CalculoResult
 
     public static function fromArray(array $data): self
     {
-        $objetos = array_map(fn(array $item) => ItemResult::fromArray($item), $data['objetos'] ?? []);
+        $objetos = array_map(ItemResult::fromArray(...), $data['objetos'] ?? []);
 
         $total = TotaisResult::fromArray($data['total'] ?? []);
 

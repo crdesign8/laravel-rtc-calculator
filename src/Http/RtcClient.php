@@ -106,7 +106,7 @@ class RtcClient implements RtcClientContract
     {
         $endpoint = '/api/calculadora/xml/validate';
 
-        $this->logRequest('POST', $endpoint, ['xml_preview' => substr($xml, 0, 200)]);
+        $this->logRequest('POST', $endpoint, ['xml_preview' => substr($xml, offset: 0, length: 200)]);
 
         try {
             $response = $this->httpClient()->withBody($xml, 'application/xml')->post($endpoint);

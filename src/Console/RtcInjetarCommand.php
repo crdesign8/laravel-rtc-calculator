@@ -69,7 +69,7 @@ class RtcInjetarCommand extends Command
 
         try {
             $result = CalculoResult::fromArray($data);
-            $xmlRtc = new GerarXmlRtcAction($client)->handle($result, $tipo);
+            $xmlRtc = (new GerarXmlRtcAction($client))->handle($result, $tipo);
         } catch (RtcConnectionException $e) {
             $this->error('Falha de conexão: ' . $e->getMessage());
 
@@ -87,7 +87,7 @@ class RtcInjetarCommand extends Command
         $this->info('Injetando grupos RTC na NFe...');
 
         try {
-            $nfeComRtc = new InjetarXmlNfeAction()->handle($xmlRtc, $xmlNfe);
+            $nfeComRtc = (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
         } catch (RtcValidationException $e) {
             $this->error('Erro na injeção XML: ' . $e->getMessage());
 

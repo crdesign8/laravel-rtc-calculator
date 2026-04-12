@@ -53,10 +53,10 @@ class ItemDTO
             cst: $data['cst'],
             baseCalculo: (float) $data['baseCalculo'],
             cClassTrib: $data['cClassTrib'],
-            tributacaoRegular: isset($data['tributacaoRegular'])
+            tributacaoRegular: array_key_exists('tributacaoRegular', $data)
                 ? TributacaoRegularDTO::fromArray($data['tributacaoRegular'])
                 : null,
-            impostoSeletivo: isset($data['impostoSeletivo'])
+            impostoSeletivo: array_key_exists('impostoSeletivo', $data)
                 ? ImpostoSeletivoDTO::fromArray($data['impostoSeletivo'])
                 : null,
         );
@@ -128,7 +128,7 @@ class ItemDTO
      */
     public static function make(int $numero): self
     {
-        $instance = new self(
+        return new self(
             numero: $numero,
             ncm: '',
             quantidade: 0,
@@ -137,8 +137,6 @@ class ItemDTO
             baseCalculo: 0,
             cClassTrib: '',
         );
-
-        return $instance;
     }
 
     public function ncm(string $ncm): static

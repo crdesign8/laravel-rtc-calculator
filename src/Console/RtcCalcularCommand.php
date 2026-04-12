@@ -24,7 +24,7 @@ class RtcCalcularCommand extends Command
     {
         $caminho = $this->argument('arquivo');
 
-        if (!file_exists($caminho)) {
+        if (! file_exists($caminho)) {
             $this->error("Arquivo não encontrado: {$caminho}");
 
             return self::FAILURE;
@@ -34,7 +34,7 @@ class RtcCalcularCommand extends Command
         $data = json_decode($json, associative: true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error('Arquivo JSON inválido: ' . json_last_error_msg());
+            $this->error('Arquivo JSON inválido: '.json_last_error_msg());
 
             return self::FAILURE;
         }
@@ -43,20 +43,20 @@ class RtcCalcularCommand extends Command
 
         try {
             $dto = CalculoRequestDTO::fromArray($data);
-            $result = new CalcularTributosAction($client)->handle($dto);
+            $result = (new CalcularTributosAction($client))->handle($dto);
         } catch (RtcConnectionException $e) {
-            $this->error('Falha de conexão: ' . $e->getMessage());
+            $this->error('Falha de conexão: '.$e->getMessage());
 
             return self::FAILURE;
         } catch (RtcValidationException $e) {
-            $this->error('Erro de validação: ' . $e->getMessage());
+            $this->error('Erro de validação: '.$e->getMessage());
             foreach ($e->getErrors() as $err) {
                 $this->line("  • {$err}");
             }
 
             return self::FAILURE;
         } catch (RtcCalculationException $e) {
-            $this->error('Erro no cálculo: ' . $e->getMessage());
+            $this->error('Erro no cálculo: '.$e->getMessage());
 
             return self::FAILURE;
         }
@@ -64,7 +64,7 @@ class RtcCalcularCommand extends Command
         // Exibe resumo no terminal
         $this->newLine();
         $this->line('<fg=green;options=bold>Resultado do Cálculo RTC</>');
-        $this->line(str_repeat('─', 50));
+        $this->line(str_repeat('─', times: 50));
 
         $total = $result->getTotal();
         $this->table(['Tributo', 'Valor'], [
@@ -76,7 +76,7 @@ class RtcCalcularCommand extends Command
             ['IBSCBSTot — CBS Total', $total->getVCbsTot()],
         ]);
 
-        $this->line('Itens calculados: ' . count($result->getObjetos()));
+        $this->line('Itens calculados: '.count($result->getObjetos()));
 
         // Salva em arquivo se solicitado
         $arquivoSaida = $this->option('saida');

@@ -135,8 +135,8 @@ class InjetarXmlNfeAction
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
-        if (!$loaded || !empty($errors)) {
-            $messages = array_map(fn($e) => trim($e->message), $errors);
+        if (!$loaded || $errors !== []) {
+            $messages = array_map(static fn($e) => trim($e->message), $errors);
             throw new RtcValidationException("{$label} inválido: " . implode('; ', $messages), errors: $messages);
         }
 

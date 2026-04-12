@@ -28,7 +28,7 @@ class CalculoRequestDTO
             'dataHoraEmissao' => $this->dataHoraEmissao,
             'municipio' => $this->municipio,
             'uf' => $this->uf->value,
-            'itens' => array_map(fn(ItemDTO $item) => $item->toArray(), $this->itens),
+            'itens' => array_map(static fn(ItemDTO $item) => $item->toArray(), $this->itens),
         ];
     }
 
@@ -40,7 +40,7 @@ class CalculoRequestDTO
             dataHoraEmissao: $data['dataHoraEmissao'],
             municipio: (int) $data['municipio'],
             uf: Uf::from($data['uf']),
-            itens: array_map(fn(array $item) => ItemDTO::fromArray($item), $data['itens'] ?? []),
+            itens: array_map(ItemDTO::fromArray(...), $data['itens'] ?? []),
         );
     }
 

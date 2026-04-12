@@ -8,5 +8,5 @@ use RuntimeException;
 
 class RtcConnectionException extends RuntimeException
 {
-    //
+
 }

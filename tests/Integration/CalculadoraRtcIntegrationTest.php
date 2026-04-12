@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Tests\Integration;
 
 use Crdesign8\LaravelRtcCalculator\Actions\CalcularTributosAction;
@@ -48,7 +50,7 @@ class CalculadoraRtcIntegrationTest extends TestCase
     public function test_calcula_regime_geral_e_retorna_calculo_result(): void
     {
         $dto = $this->dtoDoFixture();
-        $result = new CalcularTributosAction($this->client)->handle($dto);
+        $result = (new CalcularTributosAction($this->client))->handle($dto);
 
         $this->assertInstanceOf(CalculoResult::class, $result);
         $this->assertNotEmpty($result->getObjetos());
@@ -56,7 +58,7 @@ class CalculadoraRtcIntegrationTest extends TestCase
 
     public function test_resultado_contem_item_1(): void
     {
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
 
         $item = $result->getItem(1);
 
@@ -66,14 +68,14 @@ class CalculadoraRtcIntegrationTest extends TestCase
 
     public function test_is_retorna_cst_000_para_cigarro(): void
     {
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
 
         $this->assertSame('000', $result->getItem(1)->getCstIs());
     }
 
     public function test_base_calculo_is_bate_com_valor_enviado(): void
     {
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
 
         // O fixture envia baseCalculo = 1111, a API deve confirmar vBCIS = "1111.00"
         $this->assertSame('1111.00', $result->getItem(1)->getVBcIs());
@@ -81,7 +83,7 @@ class CalculadoraRtcIntegrationTest extends TestCase
 
     public function test_totais_sao_calculados(): void
     {
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
         $total = $result->getTotal();
 
         // Resultado deve ter estrutura de totais (valores podem variar entre versões da API)
@@ -95,7 +97,7 @@ class CalculadoraRtcIntegrationTest extends TestCase
     {
         $esperado = json_decode(file_get_contents(__DIR__ . '/../Fixtures/saida-regime-geral.json'), associative: true);
 
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
         $real = $result->toArray();
 
         // Compara estrutura nObj e valores tributários (não memoriaCalculo que pode mudar)
@@ -117,8 +119,8 @@ class CalculadoraRtcIntegrationTest extends TestCase
 
     public function test_gera_xml_rtc_para_nfe(): void
     {
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
-        $xml = new GerarXmlRtcAction($this->client)->handle($result, TipoDocumento::NFe);
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
+        $xml = (new GerarXmlRtcAction($this->client))->handle($result, TipoDocumento::NFe);
 
         $this->assertIsString($xml);
         $this->assertStringContainsString('<?xml', $xml);
@@ -128,8 +130,8 @@ class CalculadoraRtcIntegrationTest extends TestCase
 
     public function test_xml_gerado_contem_totalizadores(): void
     {
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
-        $xml = new GerarXmlRtcAction($this->client)->handle($result, TipoDocumento::NFe);
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
+        $xml = (new GerarXmlRtcAction($this->client))->handle($result, TipoDocumento::NFe);
 
         $this->assertStringContainsString('<ISTot>', $xml);
         $this->assertStringContainsString('<IBSCBSTot>', $xml);
@@ -137,11 +139,14 @@ class CalculadoraRtcIntegrationTest extends TestCase
 
     public function test_xml_gerado_e_xml_valido(): void
     {
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
-        $xml = new GerarXmlRtcAction($this->client)->handle($result, TipoDocumento::NFe);
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
+        $xml = (new GerarXmlRtcAction($this->client))->handle($result, TipoDocumento::NFe);
 
         $doc = new \DOMDocument();
-        $loaded = @$doc->loadXML($xml);
+        libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($xml);
+        libxml_clear_errors();
+        libxml_use_internal_errors(false);
 
         $this->assertTrue($loaded, "O XML gerado pela API deve ser sintáticamente válido.\nConteúdo: {$xml}");
     }
@@ -155,15 +160,15 @@ class CalculadoraRtcIntegrationTest extends TestCase
         $xmlNfe = file_get_contents(__DIR__ . '/../Fixtures/nfe-sem-rtc.xml');
 
         // 1. Calcula
-        $result = new CalcularTributosAction($this->client)->handle($this->dtoDoFixture());
+        $result = (new CalcularTributosAction($this->client))->handle($this->dtoDoFixture());
         $this->assertNotEmpty($result->getObjetos(), 'Cálculo deve retornar objetos');
 
         // 2. Gera XML RTC
-        $xmlRtc = new GerarXmlRtcAction($this->client)->handle($result, TipoDocumento::NFe);
+        $xmlRtc = (new GerarXmlRtcAction($this->client))->handle($result, TipoDocumento::NFe);
         $this->assertStringContainsString('<IS>', $xmlRtc, 'XML RTC deve conter bloco IS');
 
         // 3. Injeta na NFe
-        $nfeComRtc = new InjetarXmlNfeAction()->handle($xmlRtc, $xmlNfe);
+        $nfeComRtc = (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
 
         $doc = new \DOMDocument();
         $doc->loadXML($nfeComRtc);

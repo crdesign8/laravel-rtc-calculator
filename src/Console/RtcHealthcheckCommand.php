@@ -17,8 +17,8 @@ class RtcHealthcheckCommand extends Command
 
     public function handle(): int
     {
-        $baseUrl = $this->option('url') ?? config('rtc.base_url', 'http://localhost:8080');
-        $timeout = (int) config('rtc.timeout', 5);
+        $baseUrl = $this->option('url') ?? config('rtc.base_url', default: 'http://localhost:8080');
+        $timeout = (int) config('rtc.timeout', default: 5);
 
         $this->line('Verificando conexão com a calculadora RTC...');
         $this->line("URL: <fg=cyan>{$baseUrl}</>");
@@ -45,13 +45,13 @@ class RtcHealthcheckCommand extends Command
 
             if ($responseRoot->status() < 500) {
                 $this->line(
-                    '<fg=green;options=bold>✔ Calculadora RTC está acessível (HTTP ' . $responseRoot->status() . ')</>',
+                    '<fg=green;options=bold>✔ Calculadora RTC está acessível (HTTP '.$responseRoot->status().')</>',
                 );
 
                 return self::SUCCESS;
             }
 
-            $this->error('✘ Calculadora retornou erro HTTP ' . $response->status());
+            $this->error('✘ Calculadora retornou erro HTTP '.$response->status());
 
             return self::FAILURE;
         } catch (ConnectionException $e) {

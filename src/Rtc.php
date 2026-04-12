@@ -157,7 +157,7 @@ class Rtc
      */
     public function gerarXml(CalculoResult $result, TipoDocumento $tipo = TipoDocumento::NFe): string
     {
-        return new GerarXmlRtcAction($this->client)->handle($result, $tipo);
+        return (new GerarXmlRtcAction($this->client))->handle($result, $tipo);
     }
 
     /**
@@ -168,7 +168,7 @@ class Rtc
      */
     public function validarXml(string $xml): bool
     {
-        return new ValidarXmlRtcAction($this->client)->handle($xml);
+        return (new ValidarXmlRtcAction($this->client))->handle($xml);
     }
 
     /**
@@ -180,7 +180,7 @@ class Rtc
      */
     public function injetarNfe(string $xmlRtc, string $xmlNfe): string
     {
-        return new InjetarXmlNfeAction()->handle($xmlRtc, $xmlNfe);
+        return (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
     }
 
     /**
@@ -205,7 +205,7 @@ class Rtc
      */
     public function calcularPorNfe(string $xmlNfe, array $rtcPorItem, string $versao = '1.0.0'): CalculoResult
     {
-        return new CalcularPorNfeXmlAction($this->client)->handle($xmlNfe, $rtcPorItem, $versao);
+        return (new CalcularPorNfeXmlAction($this->client))->handle($xmlNfe, $rtcPorItem, $versao);
     }
 
     // -----------------------------------------------------------------------
@@ -233,12 +233,10 @@ class Rtc
     private function buildDto(): CalculoRequestDTO
     {
         if ($this->municipio === null || $this->uf === null) {
-            throw new InvalidArgumentException(
-                'Município e UF são obrigatórios. Use paraFiscal(municipio: X, uf: Y).',
-            );
+            throw new InvalidArgumentException('Município e UF são obrigatórios. Use paraFiscal(municipio: X, uf: Y).');
         }
 
-        if (empty($this->itens)) {
+        if ($this->itens === []) {
             throw new InvalidArgumentException('Ao menos um item é necessário. Use addItem(ItemDTO).');
         }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Tests\Unit\DTOs;
 
 use PHPUnit\Framework\TestCase;

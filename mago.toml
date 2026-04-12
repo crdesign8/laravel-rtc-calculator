@@ -7,19 +7,39 @@
 
 php-version = "8.1"
 
+
 # ------------------------------------------------------------
 # Fontes analisadas
 # ------------------------------------------------------------
 
 [source]
-paths    = ["src", "tests"]
-excludes = ["vendor"]
+paths    = ["src"]
+includes = ["vendor"]
+
+excludes = [
+    "vendor",
+    "tests"
+    ]
+
+[formatter]
+# laravel-pint replica exata do preset do Pint oficial;
+# sobrescrevemos somente as opções que divergem do padrão do projeto.
+preset     = "laravel-pint"
+print-width = 120
+tab-width   = 4
+use-tabs    = false
+
+
 
 # ============================================================
 # LINTER — regras de estilo e qualidade
 # ============================================================
 
 [linter]
+# Baseline com issues inevitáveis por natureza do domínio
+# (DTOs com muitos parâmetros, enum com 27 UFs, classes com muitos métodos)
+# Gerado com: ./mago lint --generate-baseline --baseline mago-baseline.json
+baseline = "mago-baseline.json"
 
 # ────────────────────────────────────────────────────────────
 # Complexidade e métricas
