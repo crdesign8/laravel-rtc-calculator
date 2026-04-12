@@ -13,6 +13,13 @@ use Crdesign8\LaravelRtcCalculator\Exceptions\RtcCalculationException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcConnectionException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use Illuminate\Console\Command;
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
+use function json_decode;
+use function json_last_error;
+use function json_last_error_msg;
+use function strtoupper;
 
 class RtcInjetarCommand extends Command
 {

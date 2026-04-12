@@ -10,6 +10,7 @@ use Crdesign8\LaravelRtcCalculator\Console\RtcInjetarCommand;
 use Crdesign8\LaravelRtcCalculator\Contracts\RtcClientContract;
 use Crdesign8\LaravelRtcCalculator\Http\RtcClient;
 use Illuminate\Support\ServiceProvider;
+use function config_path;
 
 class RtcServiceProvider extends ServiceProvider
 {

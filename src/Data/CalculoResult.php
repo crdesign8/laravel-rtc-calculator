@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
+use function array_map;
+use function json_encode;
+
 /**
  * Representa o resultado completo de um cálculo RTC.
  *

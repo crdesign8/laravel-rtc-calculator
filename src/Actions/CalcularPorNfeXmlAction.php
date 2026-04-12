@@ -12,6 +12,15 @@ use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use DOMDocument;
 use DOMXPath;
+use function array_key_exists;
+use function array_map;
+use function file_get_contents;
+use function implode;
+use function libxml_clear_errors;
+use function libxml_get_errors;
+use function libxml_use_internal_errors;
+use function strtoupper;
+use function trim;
 
 /**
  * Calcula tributos RTC extraindo os campos de identificação e de produtos

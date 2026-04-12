@@ -7,6 +7,7 @@ namespace Crdesign8\LaravelRtcCalculator\Console;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use function config;
 
 class RtcHealthcheckCommand extends Command
 {

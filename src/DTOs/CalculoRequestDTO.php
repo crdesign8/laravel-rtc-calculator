@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\Uf;
+use function array_map;
+use function now;
+use function strtoupper;
 
 class CalculoRequestDTO
 {

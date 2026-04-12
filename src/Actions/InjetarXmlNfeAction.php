@@ -7,6 +7,12 @@ namespace Crdesign8\LaravelRtcCalculator\Actions;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use DOMDocument;
 use DOMXPath;
+use function array_map;
+use function implode;
+use function libxml_clear_errors;
+use function libxml_get_errors;
+use function libxml_use_internal_errors;
+use function trim;
 
 /**
  * Injeta os grupos RTC (IS, IBSCBS, ISTot, IBSCBSTot) em uma NFe existente.

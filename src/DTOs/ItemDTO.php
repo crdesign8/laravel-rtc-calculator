@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
+use function array_key_exists;
 
 class ItemDTO
 {

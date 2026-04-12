@@ -210,6 +210,21 @@ functions  = [
   "exit",
 ]
 
+# Proíbe $request->all() — vetor de mass-assignment; usar only()/validated()
+[linter.rules.no-request-all]
+enabled = true
+level   = "error"
+
+# Saída de dados sem escaping em responses — previne XSS
+[linter.rules.no-unescaped-output]
+enabled = true
+level   = "error"
+
+# Tags PHP curtas (<?) podem ser desabilitadas em alguns servidores
+[linter.rules.no-short-opening-tag]
+enabled = true
+level   = "error"
+
 # ────────────────────────────────────────────────────────────
 # Boas práticas / legibilidade
 # ────────────────────────────────────────────────────────────
@@ -239,11 +254,54 @@ level   = "warning"
 enabled = true
 level   = "warning"
 
+# Cláusula else desnecessária após return/throw — early-return obrigatório
+[linter.rules.no-else-clause]
+enabled = true
+level   = "warning"
+
+# Parênteses redundantes removem ruído visual
+[linter.rules.no-redundant-parentheses]
+enabled = true
+level   = "warning"
+
+# Ternário abreviado (?:) mistura lógica e valor — usar ?? ou if/else
+[linter.rules.no-shorthand-ternary]
+enabled = true
+level   = "warning"
+
+# Chamadas de função com namespace ambíguo
+[linter.rules.ambiguous-function-call]
+enabled = true
+level   = "warning"
+
+# Literais como argumentos devem ser passados como named args para clareza
+[linter.rules.literal-named-argument]
+enabled = true
+level   = "warning"
+
+# Uma classe por arquivo — facilita navegação e autoloading
+[linter.rules.single-class-per-file]
+enabled = true
+level   = "error"
+
+# TODOs/FIXMEs legados gerenciados por backlog — não bloquear o gate de lint
+[linter.rules.tagged-todo]
+enabled = false
+
 # ============================================================
 # ANALYZER — análise estática profunda (tipos, fluxo, uso)
 # ============================================================
 
 [analyzer]
+
+# Plugins externos (nenhum ativo neste momento)
+plugins = []
+
+# Registra superglobais do PHP/Laravel para análise de tainted data
+register-super-globals = true
+
+# Cache de propriedades computadas — melhora performance da análise
+memoize-properties = true
 
 # Checar type-hints ausentes em funções/métodos
 check-missing-type-hints               = true
@@ -274,3 +332,15 @@ check-missing-override = true
 
 # Verificar inicialização de propriedades no construtor
 check-property-initialization = true
+
+# Força array_key_exists()/isset() antes de acessar chaves de array
+allow-possibly-undefined-array-keys = false
+
+# Garante acesso seguro a índices de listas (strict bounds check)
+strict-list-index-checks = true
+
+# Proíbe $flag === true; usar o próprio $flag como condição
+no-boolean-literal-comparison = true
+
+# Não verificar @throws — Laravel lança exceptions que poluiriam o relatório
+check-throws = false

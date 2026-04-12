@@ -17,6 +17,11 @@ use Crdesign8\LaravelRtcCalculator\Enums\TipoDocumento;
 use Crdesign8\LaravelRtcCalculator\Events\RtcCalculated;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use function app;
+use function event;
+use function file_get_contents;
+use function now;
+use function strtoupper;
 
 class Rtc
 {

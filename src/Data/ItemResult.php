@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
+use function array_key_exists;
+use function is_array;
+
 /**
  * Representa um objeto (item calculado) retornado pela calculadora RTC.
  *
