@@ -3,6 +3,9 @@
 namespace Crdesign8\LaravelRtcCalculator;
 
 use Illuminate\Support\ServiceProvider;
+use Crdesign8\LaravelRtcCalculator\Console\RtcCalcularCommand;
+use Crdesign8\LaravelRtcCalculator\Console\RtcHealthcheckCommand;
+use Crdesign8\LaravelRtcCalculator\Console\RtcInjetarCommand;
 use Crdesign8\LaravelRtcCalculator\Contracts\RtcClientContract;
 use Crdesign8\LaravelRtcCalculator\Http\RtcClient;
 
@@ -51,7 +54,9 @@ class RtcServiceProvider extends ServiceProvider
 
             // Registra comandos Artisan
             $this->commands([
-                // Commands serão adicionados no Milestone 8
+                RtcCalcularCommand::class,
+                RtcInjetarCommand::class,
+                RtcHealthcheckCommand::class,
             ]);
         }
     }
