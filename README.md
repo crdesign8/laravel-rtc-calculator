@@ -16,7 +16,9 @@ Ao contrário de outros exemplos disponíveis em Python, este pacote permite que
 - ✅ Geração de **XML RTC** compatível com NFe, NFCe e CTe
 - ✅ Validação de XML gerado
 - ✅ Injeção automática dos grupos RTC em NFe existentes
-- ✅ API fluente e idiomática ao estilo Laravel
+- ✅ **Cálculo direto a partir de XML de NFe** (`calcularPorNfe`) — extrai municipio, UF e itens automaticamente
+- ✅ **Evento Laravel `RtcCalculated`** — permite logging, auditoria e integrações após o cálculo
+- ✅ API fluente e idiomática ao estilo Laravel com `addItem()` e `addItems([])`
 - ✅ Configuração via `.env`
 - ✅ Retry automático em caso de falha de conexão
 - ✅ Cobertura de testes com PHPUnit
@@ -30,6 +32,51 @@ Ao contrário de outros exemplos disponíveis em Python, este pacote permite que
 - A **Calculadora RTC Java** rodando localmente (disponível em [consumo.tributos.gov.br](https://consumo.tributos.gov.br/servico/calcular-tributos-consumo/calculadora))
 
 > 💡 A calculadora Java expõe uma API REST em `http://localhost:8080` por padrão.
+
+---
+
+## 🐳 Como subir a Calculadora Java
+
+O pacote não inclui a Calculadora RTC — ela é disponibilizada pela **Receita Federal** como parte do programa-piloto da Reforma Tributária do Consumo.
+
+### Opção 1 — Docker (recomendado)
+
+Se você já tem a imagem `calculadora-rtc` (obtida via [consumo.tributos.gov.br](https://consumo.tributos.gov.br/servico/calcular-tributos-consumo/calculadora)):
+
+```bash
+docker run -d \
+  --name calculadora-api \
+  -p 8080:8080 \
+  -w /calculadora \
+  calculadora-rtc \
+  /bin/sh -c "
+    JAVA_HOME=/opt/java/openjdk
+    export PATH=\$JAVA_HOME/bin:\$PATH
+    java -jar /calculadora/api-regime-geral.jar --spring.profiles.active=offline
+  "
+```
+
+Verifique se está respondendo:
+
+```bash
+curl -s http://localhost:8080/actuator/health | python3 -m json.tool
+# Esperado: { "status": "UP" }
+```
+
+### Opção 2 — JAR direto (sem Docker)
+
+```bash
+java -jar api-regime-geral.jar --spring.profiles.active=offline
+```
+
+O servidor sobe em `http://localhost:8080` por padrão. Use `--server.port=PORTA` para alterar.
+
+### Checar via Artisan
+
+```bash
+php artisan rtc:healthcheck
+# Calculadora RTC disponível em http://localhost:8080 ✔
+```
 
 ---
 
@@ -88,6 +135,38 @@ echo $item->getCstIs();    // CST do Imposto Seletivo
 echo $item->getVIs();      // Valor do IS
 ```
 
+### Adicionar múltiplos itens de uma vez
+
+```php
+$resultado = Rtc::make()
+    ->paraFiscal(municipio: 4314902, uf: 'RS')
+    ->emitidoEm('2027-01-01T03:00:00-03:00')
+    ->addItems([
+        ItemDTO::make(1)->ncm('24021000')->quantidade(100)->unidade(UnidadeMedida::VN)
+            ->cst('550')->baseCalculo(500.00)->cClassTrib('550020'),
+        ItemDTO::make(2)->ncm('22030000')->quantidade(50)->unidade(UnidadeMedida::L)
+            ->cst('200')->baseCalculo(200.00)->cClassTrib('200032'),
+    ])
+    ->calcular();
+```
+
+### Calcular a partir do XML de uma NFe existente
+
+Extrai municipio, UF, data de emissão e dados de produto diretamente da nota; você só precisa informar os campos exclusivos do RTC:
+
+```php
+$result = Rtc::make()->calcularPorNfe(
+    xmlNfe: file_get_contents('nfe-sem-rtc.xml'),
+    rtcPorItem: [
+        1 => [
+            'cst'               => '200',
+            'cClassTrib'        => '200032',
+            'tributacaoRegular' => ['cst' => '200', 'cClassTrib' => '200032'],
+        ],
+    ],
+);
+```
+
 ### Gerar e Injetar XML na NFe
 
 ```php
@@ -101,6 +180,25 @@ $nfeComRtc = Rtc::make()->injetarNfe(
 );
 
 file_put_contents('nfe-com-rtc.xml', $nfeComRtc);
+```
+
+### Reagindo ao cálculo com Eventos Laravel
+
+Depois de cada cálculo bem-sucedido (via `calcular()` ou `executarCalculo()`),
+o evento `RtcCalculated` é despachado automaticamente:
+
+```php
+use Crdesign8\LaravelRtcCalculator\Events\RtcCalculated;
+
+// Em qualquer EventServiceProvider ou via closure:
+Event::listen(RtcCalculated::class, function (RtcCalculated $event) {
+    Log::info('RTC calculado', [
+        'municipio' => $event->dto->getMunicipio(),
+        'itens'     => count($event->dto->getItens()),
+        'vIsTot'    => $event->result->getTotal()->getVIsTot(),
+        'vCbsTot'   => $event->result->getTotal()->getVCbsTot(),
+    ]);
+});
 ```
 
 ---
@@ -133,6 +231,38 @@ php artisan rtc:healthcheck
 # Testar uma URL diferente da configurada
 php artisan rtc:healthcheck --url=http://meu-servidor:8080
 ```
+
+---
+
+## 🔍 Como funciona por baixo dos panos
+
+Este pacote é um **cliente HTTP** para a Calculadora RTC Java da Receita Federal. Ele não implementa nenhuma regra tributária — toda a lógica fiscal fica na calculadora oficial.
+
+### Endpoints consumidos
+
+| Método | Endpoint | Utilizado por |
+|--------|----------|---------------|
+| `POST` | `/api/calculadora/regime-geral` | `CalcularTributosAction`, `Rtc::calcular()` |
+| `POST` | `/api/calculadora/xml/generate?tipo={NFe\|NFCe\|CTe}` | `GerarXmlRtcAction`, `Rtc::gerarXml()` |
+| `POST` | `/api/calculadora/xml/validate` | `ValidarXmlRtcAction`, `Rtc::validarXml()` |
+
+### Fluxo de uma requisição
+
+```
+Facade / Builder
+  └─ Rtc::calcular()
+       └─ CalcularTributosAction::handle(CalculoRequestDTO)
+            └─ RtcClient::calcularRegimeGeral()
+                 └─ POST /api/calculadora/regime-geral  (JSON)
+                      └─ CalculoResult::fromArray()     (resposta tipada)
+                           └─ event(RtcCalculated)      (evento Laravel)
+```
+
+> A injeção na NFe (`InjetarXmlNfeAction`) é executada **localmente**, sem chamada HTTP — ela apenas combina os XMLs usando DOMDocument.
+
+### Autenticação e ambiente de produção
+
+Atualmente a Calculadora RTC está em fase **piloto** e não exige autenticação. Quando a Receita Federal disponibilizar o ambiente de produção com autenticação, bastará adicionar headers customizados via `config/rtc.php`.
 
 ---
 

@@ -7,6 +7,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+
+- `addItems(ItemDTO[] $itens)` no builder fluente — adiciona múltiplos itens em uma chamada
+- `Rtc::calcularPorNfe(xmlNfe, rtcPorItem)` — extrai municipio, UF e itens do XML da NFe e calcula diretamente
+- `Actions/CalcularPorNfeXmlAction` — action responsável pelo parsing do XML e montagem do DTO
+- `Events/RtcCalculated` — evento Laravel disparado após cada cálculo bem-sucedido (inclui dto + result)
+- README: seção "Como subir a Calculadora Java" com comandos Docker e JAR
+- README: seção "Como funciona por baixo dos panos" com tabela de endpoints e fluxo de requisição
+
 ## [1.0.0] - 2026-04-12
 
 ### Adicionado

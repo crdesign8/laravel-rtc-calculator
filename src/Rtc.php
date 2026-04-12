@@ -2,6 +2,7 @@
 
 namespace Crdesign8\LaravelRtcCalculator;
 
+use Crdesign8\LaravelRtcCalculator\Actions\CalcularPorNfeXmlAction;
 use Crdesign8\LaravelRtcCalculator\Actions\CalcularTributosAction;
 use Crdesign8\LaravelRtcCalculator\Actions\GerarXmlRtcAction;
 use Crdesign8\LaravelRtcCalculator\Actions\InjetarXmlNfeAction;
@@ -11,6 +12,7 @@ use Crdesign8\LaravelRtcCalculator\Data\CalculoResult;
 use Crdesign8\LaravelRtcCalculator\DTOs\CalculoRequestDTO;
 use Crdesign8\LaravelRtcCalculator\DTOs\ItemDTO;
 use Crdesign8\LaravelRtcCalculator\Enums\TipoDocumento;
+use Crdesign8\LaravelRtcCalculator\Events\RtcCalculated;
 
 class Rtc
 {
@@ -103,6 +105,20 @@ class Rtc
     }
 
     /**
+     * Adiciona múltiplos itens de uma vez ao cálculo.
+     *
+     * @param  ItemDTO[]  $itens
+     */
+    public function addItems(array $itens): static
+    {
+        foreach ($itens as $item) {
+            $this->itens[] = $item;
+        }
+
+        return $this;
+    }
+
+    /**
      * Finaliza o builder e executa o cálculo de tributos.
      * Atalho para chamar o método estático após configurar o builder.
      *
@@ -110,9 +126,12 @@ class Rtc
      */
     public function calcular(): CalculoResult
     {
-        $dto = $this->buildDto();
+        $dto    = $this->buildDto();
+        $result = (new CalcularTributosAction($this->client))->handle($dto);
 
-        return (new CalcularTributosAction($this->client))->handle($dto);
+        event(new RtcCalculated($dto, $result));
+
+        return $result;
     }
 
     // -----------------------------------------------------------------------
@@ -127,7 +146,11 @@ class Rtc
      */
     public function executarCalculo(CalculoRequestDTO $dto): CalculoResult
     {
-        return (new CalcularTributosAction($this->client))->handle($dto);
+        $result = (new CalcularTributosAction($this->client))->handle($dto);
+
+        event(new RtcCalculated($dto, $result));
+
+        return $result;
     }
 
     /**
@@ -163,6 +186,34 @@ class Rtc
     public function injetarNfe(string $xmlRtc, string $xmlNfe): string
     {
         return (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
+    }
+
+    /**
+     * Extrai municipio, UF, data de emissão e itens diretamente do XML da NFe
+     * e executa o cálculo de tributos RTC em uma única chamada.
+     *
+     * Os campos exclusivos do RTC (cst, cClassTrib) devem ser informados via
+     * $rtcPorItem porque não existem na NFe padrão.
+     *
+     * Exemplo:
+     *
+     *   $result = Rtc::make()->calcularPorNfe(
+     *       xmlNfe: file_get_contents('nfe.xml'),
+     *       rtcPorItem: [
+     *           1 => ['cst' => '200', 'cClassTrib' => '200032'],
+     *       ],
+     *   );
+     *
+     * @param  string  $xmlNfe     XML da NFe (enviNFe, nfeProc ou infNFe)
+     * @param  array   $rtcPorItem Dados RTC indexados pelo nItem (1-based)
+     * @param  string  $versao     Versão do layout (padrão: '1.0.0')
+     */
+    public function calcularPorNfe(
+        string $xmlNfe,
+        array $rtcPorItem,
+        string $versao = '1.0.0',
+    ): CalculoResult {
+        return (new CalcularPorNfeXmlAction($this->client))->handle($xmlNfe, $rtcPorItem, $versao);
     }
 
     // -----------------------------------------------------------------------
