@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\Uf;
@@ -21,27 +23,24 @@ class CalculoRequestDTO
     public function toArray(): array
     {
         return [
-            'id'               => $this->id,
-            'versao'           => $this->versao,
-            'dataHoraEmissao'  => $this->dataHoraEmissao,
-            'municipio'        => $this->municipio,
-            'uf'               => $this->uf->value,
-            'itens'            => array_map(fn (ItemDTO $item) => $item->toArray(), $this->itens),
+            'id' => $this->id,
+            'versao' => $this->versao,
+            'dataHoraEmissao' => $this->dataHoraEmissao,
+            'municipio' => $this->municipio,
+            'uf' => $this->uf->value,
+            'itens' => array_map(fn(ItemDTO $item) => $item->toArray(), $this->itens),
         ];
     }
 
     public static function fromArray(array $data): self
     {
         return new self(
-            id:               $data['id'],
-            versao:           $data['versao'],
-            dataHoraEmissao:  $data['dataHoraEmissao'],
-            municipio:        (int) $data['municipio'],
-            uf:               Uf::from($data['uf']),
-            itens:            array_map(
-                                  fn (array $item) => ItemDTO::fromArray($item),
-                                  $data['itens'] ?? []
-                              ),
+            id: $data['id'],
+            versao: $data['versao'],
+            dataHoraEmissao: $data['dataHoraEmissao'],
+            municipio: (int) $data['municipio'],
+            uf: Uf::from($data['uf']),
+            itens: array_map(fn(array $item) => ItemDTO::fromArray($item), $data['itens'] ?? []),
         );
     }
 
@@ -104,12 +103,12 @@ class CalculoRequestDTO
         string $versao = '1.0.0',
     ): self {
         return new self(
-            id:               $id ?? \Illuminate\Support\Str::uuid()->toString(),
-            versao:           $versao,
-            dataHoraEmissao:  $dataHoraEmissao ?? now()->toIso8601String(),
-            municipio:        $municipio,
-            uf:               Uf::from(strtoupper($uf)),
-            itens:            $itens,
+            id: $id ?? \Illuminate\Support\Str::uuid()->toString(),
+            versao: $versao,
+            dataHoraEmissao: $dataHoraEmissao ?? now()->toIso8601String(),
+            municipio: $municipio,
+            uf: Uf::from(strtoupper($uf)),
+            itens: $itens,
         );
     }
 }

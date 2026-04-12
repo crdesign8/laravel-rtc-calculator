@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator;
 
 use Crdesign8\LaravelRtcCalculator\Actions\CalcularPorNfeXmlAction;
@@ -13,6 +15,8 @@ use Crdesign8\LaravelRtcCalculator\DTOs\CalculoRequestDTO;
 use Crdesign8\LaravelRtcCalculator\DTOs\ItemDTO;
 use Crdesign8\LaravelRtcCalculator\Enums\TipoDocumento;
 use Crdesign8\LaravelRtcCalculator\Events\RtcCalculated;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class Rtc
 {
@@ -36,7 +40,7 @@ class Rtc
     // -----------------------------------------------------------------------
 
     public function __construct(
-        private readonly RtcClientContract $client
+        private readonly RtcClientContract $client,
     ) {}
 
     // -----------------------------------------------------------------------
@@ -126,12 +130,7 @@ class Rtc
      */
     public function calcular(): CalculoResult
     {
-        $dto    = $this->buildDto();
-        $result = (new CalcularTributosAction($this->client))->handle($dto);
-
-        event(new RtcCalculated($dto, $result));
-
-        return $result;
+        return $this->doCalculo($this->buildDto());
     }
 
     // -----------------------------------------------------------------------
@@ -146,11 +145,7 @@ class Rtc
      */
     public function executarCalculo(CalculoRequestDTO $dto): CalculoResult
     {
-        $result = (new CalcularTributosAction($this->client))->handle($dto);
-
-        event(new RtcCalculated($dto, $result));
-
-        return $result;
+        return $this->doCalculo($dto);
     }
 
     /**
@@ -162,7 +157,7 @@ class Rtc
      */
     public function gerarXml(CalculoResult $result, TipoDocumento $tipo = TipoDocumento::NFe): string
     {
-        return (new GerarXmlRtcAction($this->client))->handle($result, $tipo);
+        return new GerarXmlRtcAction($this->client)->handle($result, $tipo);
     }
 
     /**
@@ -173,7 +168,7 @@ class Rtc
      */
     public function validarXml(string $xml): bool
     {
-        return (new ValidarXmlRtcAction($this->client))->handle($xml);
+        return new ValidarXmlRtcAction($this->client)->handle($xml);
     }
 
     /**
@@ -185,7 +180,7 @@ class Rtc
      */
     public function injetarNfe(string $xmlRtc, string $xmlNfe): string
     {
-        return (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
+        return new InjetarXmlNfeAction()->handle($xmlRtc, $xmlNfe);
     }
 
     /**
@@ -208,17 +203,27 @@ class Rtc
      * @param  array   $rtcPorItem Dados RTC indexados pelo nItem (1-based)
      * @param  string  $versao     Versão do layout (padrão: '1.0.0')
      */
-    public function calcularPorNfe(
-        string $xmlNfe,
-        array $rtcPorItem,
-        string $versao = '1.0.0',
-    ): CalculoResult {
-        return (new CalcularPorNfeXmlAction($this->client))->handle($xmlNfe, $rtcPorItem, $versao);
+    public function calcularPorNfe(string $xmlNfe, array $rtcPorItem, string $versao = '1.0.0'): CalculoResult
+    {
+        return new CalcularPorNfeXmlAction($this->client)->handle($xmlNfe, $rtcPorItem, $versao);
     }
 
     // -----------------------------------------------------------------------
     // Helpers internos
     // -----------------------------------------------------------------------
+
+    /**
+     * Executa o cálculo e despacha o evento RtcCalculated.
+     * Ponto único de saída para calcular() e executarCalculo() (DRY).
+     */
+    private function doCalculo(CalculoRequestDTO $dto): CalculoResult
+    {
+        $result = (new CalcularTributosAction($this->client))->handle($dto);
+
+        event(new RtcCalculated($dto, $result));
+
+        return $result;
+    }
 
     /**
      * Constrói o DTO de requisição a partir do estado do builder.
@@ -228,15 +233,13 @@ class Rtc
     private function buildDto(): CalculoRequestDTO
     {
         if ($this->municipio === null || $this->uf === null) {
-            throw new \InvalidArgumentException(
-                'Município e UF são obrigatórios. Use paraFiscal(municipio: X, uf: Y).'
+            throw new InvalidArgumentException(
+                'Município e UF são obrigatórios. Use paraFiscal(municipio: X, uf: Y).',
             );
         }
 
         if (empty($this->itens)) {
-            throw new \InvalidArgumentException(
-                'Ao menos um item é necessário. Use addItem(ItemDTO).'
-            );
+            throw new InvalidArgumentException('Ao menos um item é necessário. Use addItem(ItemDTO).');
         }
 
         return CalculoRequestDTO::make(
@@ -244,7 +247,7 @@ class Rtc
             uf: $this->uf,
             itens: $this->itens,
             dataHoraEmissao: $this->dataHoraEmissao ?? now()->toIso8601String(),
-            id: $this->id ?? \Illuminate\Support\Str::uuid()->toString(),
+            id: $this->id ?? Str::uuid()->toString(),
         );
     }
 }

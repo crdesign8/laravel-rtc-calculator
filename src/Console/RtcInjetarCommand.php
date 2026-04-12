@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Console;
 
-use Illuminate\Console\Command;
 use Crdesign8\LaravelRtcCalculator\Actions\GerarXmlRtcAction;
 use Crdesign8\LaravelRtcCalculator\Actions\InjetarXmlNfeAction;
 use Crdesign8\LaravelRtcCalculator\Contracts\RtcClientContract;
@@ -11,6 +12,7 @@ use Crdesign8\LaravelRtcCalculator\Enums\TipoDocumento;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcCalculationException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcConnectionException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
+use Illuminate\Console\Command;
 
 class RtcInjetarCommand extends Command
 {
@@ -24,18 +26,18 @@ class RtcInjetarCommand extends Command
 
     public function handle(RtcClientContract $client): int
     {
-        $caminhoNfe  = $this->argument('nfe');
+        $caminhoNfe = $this->argument('nfe');
         $caminhoJson = $this->argument('rtc_json');
         $caminhoSaida = $this->argument('saida');
 
         // Valida arquivos de entrada
-        if (! file_exists($caminhoNfe)) {
+        if (!file_exists($caminhoNfe)) {
             $this->error("Arquivo NFe não encontrado: {$caminhoNfe}");
 
             return self::FAILURE;
         }
 
-        if (! file_exists($caminhoJson)) {
+        if (!file_exists($caminhoJson)) {
             $this->error("Arquivo JSON do cálculo RTC não encontrado: {$caminhoJson}");
 
             return self::FAILURE;
@@ -67,7 +69,7 @@ class RtcInjetarCommand extends Command
 
         try {
             $result = CalculoResult::fromArray($data);
-            $xmlRtc = (new GerarXmlRtcAction($client))->handle($result, $tipo);
+            $xmlRtc = new GerarXmlRtcAction($client)->handle($result, $tipo);
         } catch (RtcConnectionException $e) {
             $this->error('Falha de conexão: ' . $e->getMessage());
 
@@ -85,7 +87,7 @@ class RtcInjetarCommand extends Command
         $this->info('Injetando grupos RTC na NFe...');
 
         try {
-            $nfeComRtc = (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
+            $nfeComRtc = new InjetarXmlNfeAction()->handle($xmlRtc, $xmlNfe);
         } catch (RtcValidationException $e) {
             $this->error('Erro na injeção XML: ' . $e->getMessage());
 

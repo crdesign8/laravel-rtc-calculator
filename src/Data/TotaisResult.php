@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
 /**
@@ -35,11 +37,7 @@ class TotaisResult
     {
         $tribCalc = $data['tribCalc'] ?? $data;
 
-        return new self(
-            isTot:    $tribCalc['ISTot'] ?? [],
-            ibsCbsTot: $tribCalc['IBSCBSTot'] ?? [],
-            raw:      $data,
-        );
+        return new self(isTot: $tribCalc['ISTot'] ?? [], ibsCbsTot: $tribCalc['IBSCBSTot'] ?? [], raw: $data);
     }
 
     public function toArray(): array
@@ -102,4 +100,3 @@ class TotaisResult
         return (string) ($this->ibsCbsTot['gIBS']['vCredPres'] ?? '0.00');
     }
 }
-

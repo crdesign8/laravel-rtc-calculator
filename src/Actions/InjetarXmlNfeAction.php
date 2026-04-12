@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Actions;
 
+use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use DOMDocument;
 use DOMXPath;
-use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 
 /**
  * Injeta os grupos RTC (IS, IBSCBS, ISTot, IBSCBSTot) em uma NFe existente.
@@ -69,13 +71,13 @@ class InjetarXmlNfeAction
             }
 
             // IS
-            $isRtc = $rtcXpath->query("nfe:imposto/nfe:IS", $detRtc)->item(0);
+            $isRtc = $rtcXpath->query('nfe:imposto/nfe:IS', $detRtc)->item(0);
             if ($isRtc !== null) {
                 $impostoNfe->appendChild($nfeDoc->importNode($isRtc, deep: true));
             }
 
             // IBSCBS
-            $ibsRtc = $rtcXpath->query("nfe:imposto/nfe:IBSCBS", $detRtc)->item(0);
+            $ibsRtc = $rtcXpath->query('nfe:imposto/nfe:IBSCBS', $detRtc)->item(0);
             if ($ibsRtc !== null) {
                 $impostoNfe->appendChild($nfeDoc->importNode($ibsRtc, deep: true));
             }
@@ -101,9 +103,7 @@ class InjetarXmlNfeAction
         $isTot = $rtcXpath->query('//nfe:total/nfe:ISTot')->item(0);
         if ($isTot !== null) {
             $node = $nfeDoc->importNode($isTot, deep: true);
-            $vNfTot !== null
-                ? $totalNfe->insertBefore($node, $vNfTot)
-                : $totalNfe->appendChild($node);
+            $vNfTot !== null ? $totalNfe->insertBefore($node, $vNfTot) : $totalNfe->appendChild($node);
         }
 
         // Atualiza referência pois o DOM mudou
@@ -113,9 +113,7 @@ class InjetarXmlNfeAction
         $ibsCbsTot = $rtcXpath->query('//nfe:total/nfe:IBSCBSTot')->item(0);
         if ($ibsCbsTot !== null) {
             $node = $nfeDoc->importNode($ibsCbsTot, deep: true);
-            $vNfTot !== null
-                ? $totalNfe->insertBefore($node, $vNfTot)
-                : $totalNfe->appendChild($node);
+            $vNfTot !== null ? $totalNfe->insertBefore($node, $vNfTot) : $totalNfe->appendChild($node);
         }
     }
 
@@ -137,12 +135,9 @@ class InjetarXmlNfeAction
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
-        if (! $loaded || ! empty($errors)) {
-            $messages = array_map(fn ($e) => trim($e->message), $errors);
-            throw new RtcValidationException(
-                "{$label} inválido: " . implode('; ', $messages),
-                errors: $messages,
-            );
+        if (!$loaded || !empty($errors)) {
+            $messages = array_map(fn($e) => trim($e->message), $errors);
+            throw new RtcValidationException("{$label} inválido: " . implode('; ', $messages), errors: $messages);
         }
 
         return $doc;

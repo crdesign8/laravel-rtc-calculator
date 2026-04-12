@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
 /**
@@ -27,18 +29,11 @@ class CalculoResult
 
     public static function fromArray(array $data): self
     {
-        $objetos = array_map(
-            fn (array $item) => ItemResult::fromArray($item),
-            $data['objetos'] ?? [],
-        );
+        $objetos = array_map(fn(array $item) => ItemResult::fromArray($item), $data['objetos'] ?? []);
 
         $total = TotaisResult::fromArray($data['total'] ?? []);
 
-        return new self(
-            objetos: $objetos,
-            total:   $total,
-            raw:     $data,
-        );
+        return new self(objetos: $objetos, total: $total, raw: $data);
     }
 
     public function toArray(): array
@@ -76,4 +71,3 @@ class CalculoResult
         return null;
     }
 }
-

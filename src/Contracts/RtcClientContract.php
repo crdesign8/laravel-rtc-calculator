@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Contracts;
 
 use Crdesign8\LaravelRtcCalculator\Data\CalculoResult;

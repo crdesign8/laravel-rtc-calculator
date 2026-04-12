@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
 /**
@@ -33,10 +35,10 @@ class ItemResult
     public static function fromArray(array $data): self
     {
         return new self(
-            nObj:   (int) ($data['nObj'] ?? 0),
-            is:     $data['tribCalc']['IS'] ?? [],
+            nObj: (int) ($data['nObj'] ?? 0),
+            is: $data['tribCalc']['IS'] ?? [],
             ibsCbs: $data['tribCalc']['IBSCBS'] ?? [],
-            raw:    $data,
+            raw: $data,
         );
     }
 
@@ -135,4 +137,3 @@ class ItemResult
         return $this->ibsCbs['gIBSCBS']['gTribRegular'] ?? null;
     }
 }
-

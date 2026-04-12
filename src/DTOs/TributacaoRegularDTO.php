@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 class TributacaoRegularDTO
@@ -12,17 +14,14 @@ class TributacaoRegularDTO
     public function toArray(): array
     {
         return [
-            'cst'        => $this->cst,
+            'cst' => $this->cst,
             'cClassTrib' => $this->cClassTrib,
         ];
     }
 
     public static function fromArray(array $data): self
     {
-        return new self(
-            cst:        $data['cst'],
-            cClassTrib: $data['cClassTrib'],
-        );
+        return new self(cst: $data['cst'], cClassTrib: $data['cClassTrib']);
     }
 
     public function getCst(): string

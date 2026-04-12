@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Console;
 
 use Illuminate\Console\Command;
@@ -18,17 +20,15 @@ class RtcHealthcheckCommand extends Command
         $baseUrl = $this->option('url') ?? config('rtc.base_url', 'http://localhost:8080');
         $timeout = (int) config('rtc.timeout', 5);
 
-        $this->line("Verificando conexão com a calculadora RTC...");
+        $this->line('Verificando conexão com a calculadora RTC...');
         $this->line("URL: <fg=cyan>{$baseUrl}</>");
         $this->newLine();
 
         try {
-            $response = Http::baseUrl($baseUrl)
-                ->timeout($timeout)
-                ->get('/actuator/health');
+            $response = Http::baseUrl($baseUrl)->timeout($timeout)->get('/actuator/health');
 
             if ($response->successful()) {
-                $body   = $response->json();
+                $body = $response->json();
                 $status = $body['status'] ?? 'UNKNOWN';
 
                 if ($status === 'UP') {
@@ -41,12 +41,12 @@ class RtcHealthcheckCommand extends Command
             }
 
             // Tenta o endpoint raiz como fallback (a API pode não ter /actuator)
-            $responseRoot = Http::baseUrl($baseUrl)
-                ->timeout($timeout)
-                ->get('/');
+            $responseRoot = Http::baseUrl($baseUrl)->timeout($timeout)->get('/');
 
             if ($responseRoot->status() < 500) {
-                $this->line('<fg=green;options=bold>✔ Calculadora RTC está acessível (HTTP ' . $responseRoot->status() . ')</>');
+                $this->line(
+                    '<fg=green;options=bold>✔ Calculadora RTC está acessível (HTTP ' . $responseRoot->status() . ')</>',
+                );
 
                 return self::SUCCESS;
             }
@@ -54,7 +54,6 @@ class RtcHealthcheckCommand extends Command
             $this->error('✘ Calculadora retornou erro HTTP ' . $response->status());
 
             return self::FAILURE;
-
         } catch (ConnectionException $e) {
             $this->newLine();
             $this->error('✘ Não foi possível conectar à calculadora RTC');

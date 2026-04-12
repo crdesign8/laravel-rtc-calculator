@@ -1,14 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\Console;
 
-use Illuminate\Console\Command;
 use Crdesign8\LaravelRtcCalculator\Actions\CalcularTributosAction;
 use Crdesign8\LaravelRtcCalculator\Contracts\RtcClientContract;
 use Crdesign8\LaravelRtcCalculator\DTOs\CalculoRequestDTO;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcCalculationException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcConnectionException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
+use Illuminate\Console\Command;
 
 class RtcCalcularCommand extends Command
 {
@@ -22,7 +24,7 @@ class RtcCalcularCommand extends Command
     {
         $caminho = $this->argument('arquivo');
 
-        if (! file_exists($caminho)) {
+        if (!file_exists($caminho)) {
             $this->error("Arquivo não encontrado: {$caminho}");
 
             return self::FAILURE;
@@ -40,8 +42,8 @@ class RtcCalcularCommand extends Command
         $this->info('Calculando tributos RTC...');
 
         try {
-            $dto    = CalculoRequestDTO::fromArray($data);
-            $result = (new CalcularTributosAction($client))->handle($dto);
+            $dto = CalculoRequestDTO::fromArray($data);
+            $result = new CalcularTributosAction($client)->handle($dto);
         } catch (RtcConnectionException $e) {
             $this->error('Falha de conexão: ' . $e->getMessage());
 
@@ -65,17 +67,14 @@ class RtcCalcularCommand extends Command
         $this->line(str_repeat('─', 50));
 
         $total = $result->getTotal();
-        $this->table(
-            ['Tributo', 'Valor'],
-            [
-                ['ISTot (Imposto Seletivo)', $total->getVIsTot()],
-                ['IBSCBSTot — Base de cálculo', $total->getVBcIbsCbs()],
-                ['IBSCBSTot — IBS Total', $total->getVIbsTot()],
-                ['IBSCBSTot — IBS UF', $total->getVIbsUfTot()],
-                ['IBSCBSTot — IBS Mun', $total->getVIbsMunTot()],
-                ['IBSCBSTot — CBS Total', $total->getVCbsTot()],
-            ]
-        );
+        $this->table(['Tributo', 'Valor'], [
+            ['ISTot (Imposto Seletivo)', $total->getVIsTot()],
+            ['IBSCBSTot — Base de cálculo', $total->getVBcIbsCbs()],
+            ['IBSCBSTot — IBS Total', $total->getVIbsTot()],
+            ['IBSCBSTot — IBS UF', $total->getVIbsUfTot()],
+            ['IBSCBSTot — IBS Mun', $total->getVIbsMunTot()],
+            ['IBSCBSTot — CBS Total', $total->getVCbsTot()],
+        ]);
 
         $this->line('Itens calculados: ' . count($result->getObjetos()));
 

@@ -1,13 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator;
 
-use Illuminate\Support\ServiceProvider;
 use Crdesign8\LaravelRtcCalculator\Console\RtcCalcularCommand;
 use Crdesign8\LaravelRtcCalculator\Console\RtcHealthcheckCommand;
 use Crdesign8\LaravelRtcCalculator\Console\RtcInjetarCommand;
 use Crdesign8\LaravelRtcCalculator\Contracts\RtcClientContract;
 use Crdesign8\LaravelRtcCalculator\Http\RtcClient;
+use Illuminate\Support\ServiceProvider;
 
 class RtcServiceProvider extends ServiceProvider
 {
@@ -16,10 +18,7 @@ class RtcServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(
-            __DIR__.'/../config/rtc.php',
-            'rtc'
-        );
+        $this->mergeConfigFrom(__DIR__ . '/../config/rtc.php', 'rtc');
 
         // Registra o cliente HTTP como singleton para reaproveitamento de conexão
         $this->app->singleton(RtcClientContract::class, function ($app) {
@@ -49,7 +48,7 @@ class RtcServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             // Publica o arquivo de configuração
             $this->publishes([
-                __DIR__.'/../config/rtc.php' => config_path('rtc.php'),
+                __DIR__ . '/../config/rtc.php' => config_path('rtc.php'),
             ], 'rtc-config');
 
             // Registra comandos Artisan

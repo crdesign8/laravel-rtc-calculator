@@ -78,8 +78,15 @@ class CalcularPorNfeXmlAction
     {
         $doc = new DOMDocument();
 
-        if (!@$doc->loadXML($xmlNfe)) {
-            throw new RtcValidationException('XML da NFe inválido ou malformado.');
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($xmlNfe);
+        $xmlErrors = libxml_get_errors();
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (!$loaded || !empty($xmlErrors)) {
+            $messages = array_map(fn($e) => trim($e->message), $xmlErrors);
+            throw new RtcValidationException('XML da NFe inválido ou malformado: ' . implode('; ', $messages));
         }
 
         $xpath = new DOMXPath($doc);
@@ -119,7 +126,7 @@ class CalcularPorNfeXmlAction
 
             $rtc = $rtcPorItem[$nItem];
 
-            if (empty($rtc['cst']) || empty($rtc['cClassTrib'])) {
+            if (empty($rtc['cst']) || empty($rtc['cClassTrib'])) { // empty verifica string vazia e null
                 throw new RtcValidationException(
                     "Os campos \"cst\" e \"cClassTrib\" são obrigatórios em \$rtcPorItem[{$nItem}].",
                 );
@@ -137,17 +144,31 @@ class CalcularPorNfeXmlAction
             $uRtc = self::UNIDADE_MAP[$uNfe] ?? $uNfe;
             $unidade = UnidadeMedida::tryFrom($uRtc) ?? UnidadeMedida::VN;
 
-            $itens[] = ItemDTO::fromArray([
-                'numero' => $nItem,
-                'ncm' => $ncm,
-                'quantidade' => $quantidade,
-                'unidade' => $unidade->value,
-                'cst' => $rtc['cst'],
-                'baseCalculo' => $baseCalculo,
-                'cClassTrib' => $rtc['cClassTrib'],
-                'tributacaoRegular' => $rtc['tributacaoRegular'] ?? null,
-                'impostoSeletivo' => $rtc['impostoSeletivo'] ?? null,
-            ]);
+            $item = ItemDTO::make($nItem)
+                ->ncm($ncm)
+                ->quantidade($quantidade)
+                ->unidade($unidade) // já é UnidadeMedida — sem round-trip enum→string→enum
+                ->cst($rtc['cst'])
+                ->baseCalculo($baseCalculo)
+                ->cClassTrib($rtc['cClassTrib']);
+
+            if (isset($rtc['tributacaoRegular'])) {
+                $item->tributacaoRegular($rtc['tributacaoRegular']['cst'], $rtc['tributacaoRegular']['cClassTrib']);
+            }
+
+            if (isset($rtc['impostoSeletivo'])) {
+                $is = $rtc['impostoSeletivo'];
+                $item->impostoSeletivo(
+                    cst: $is['cst'],
+                    baseCalculo: (float) $is['baseCalculo'],
+                    cClassTrib: $is['cClassTrib'],
+                    unidade: UnidadeMedida::from($is['unidade']),
+                    quantidade: (float) $is['quantidade'],
+                    impostoInformado: (float) ($is['impostoInformado'] ?? 0),
+                );
+            }
+
+            $itens[] = $item;
         }
 
         $dto = CalculoRequestDTO::make(

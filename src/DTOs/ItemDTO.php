@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
@@ -21,13 +23,13 @@ class ItemDTO
     public function toArray(): array
     {
         $data = [
-            'numero'       => $this->numero,
-            'ncm'          => $this->ncm,
-            'quantidade'   => $this->quantidade,
-            'unidade'      => $this->unidade->value,
-            'cst'          => $this->cst,
-            'baseCalculo'  => $this->baseCalculo,
-            'cClassTrib'   => $this->cClassTrib,
+            'numero' => $this->numero,
+            'ncm' => $this->ncm,
+            'quantidade' => $this->quantidade,
+            'unidade' => $this->unidade->value,
+            'cst' => $this->cst,
+            'baseCalculo' => $this->baseCalculo,
+            'cClassTrib' => $this->cClassTrib,
         ];
 
         if ($this->tributacaoRegular !== null) {
@@ -44,19 +46,19 @@ class ItemDTO
     public static function fromArray(array $data): self
     {
         return new self(
-            numero:              (int) $data['numero'],
-            ncm:                 $data['ncm'],
-            quantidade:          (float) $data['quantidade'],
-            unidade:             UnidadeMedida::from($data['unidade']),
-            cst:                 $data['cst'],
-            baseCalculo:         (float) $data['baseCalculo'],
-            cClassTrib:          $data['cClassTrib'],
-            tributacaoRegular:   isset($data['tributacaoRegular'])
-                                     ? TributacaoRegularDTO::fromArray($data['tributacaoRegular'])
-                                     : null,
-            impostoSeletivo:     isset($data['impostoSeletivo'])
-                                     ? ImpostoSeletivoDTO::fromArray($data['impostoSeletivo'])
-                                     : null,
+            numero: (int) $data['numero'],
+            ncm: $data['ncm'],
+            quantidade: (float) $data['quantidade'],
+            unidade: UnidadeMedida::from($data['unidade']),
+            cst: $data['cst'],
+            baseCalculo: (float) $data['baseCalculo'],
+            cClassTrib: $data['cClassTrib'],
+            tributacaoRegular: isset($data['tributacaoRegular'])
+                ? TributacaoRegularDTO::fromArray($data['tributacaoRegular'])
+                : null,
+            impostoSeletivo: isset($data['impostoSeletivo'])
+                ? ImpostoSeletivoDTO::fromArray($data['impostoSeletivo'])
+                : null,
         );
     }
 
@@ -127,11 +129,11 @@ class ItemDTO
     public static function make(int $numero): self
     {
         $instance = new self(
-            numero:     $numero,
-            ncm:        '',
+            numero: $numero,
+            ncm: '',
             quantidade: 0,
-            unidade:    UnidadeMedida::VN,
-            cst:        '',
+            unidade: UnidadeMedida::VN,
+            cst: '',
             baseCalculo: 0,
             cClassTrib: '',
         );
@@ -183,10 +185,7 @@ class ItemDTO
 
     public function tributacaoRegular(string $cst, string $cClassTrib): static
     {
-        $this->tributacaoRegular = new TributacaoRegularDTO(
-            cst: $cst,
-            cClassTrib: $cClassTrib,
-        );
+        $this->tributacaoRegular = new TributacaoRegularDTO(cst: $cst, cClassTrib: $cClassTrib);
 
         return $this;
     }
@@ -200,11 +199,11 @@ class ItemDTO
         float $impostoInformado = 0,
     ): static {
         $this->impostoSeletivo = new ImpostoSeletivoDTO(
-            cst:              $cst,
-            baseCalculo:      $baseCalculo,
-            cClassTrib:       $cClassTrib,
-            unidade:          $unidade,
-            quantidade:       $quantidade,
+            cst: $cst,
+            baseCalculo: $baseCalculo,
+            cClassTrib: $cClassTrib,
+            unidade: $unidade,
+            quantidade: $quantidade,
             impostoInformado: $impostoInformado,
         );
 

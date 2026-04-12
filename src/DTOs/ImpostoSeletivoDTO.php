@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
@@ -18,24 +20,24 @@ class ImpostoSeletivoDTO
     public function toArray(): array
     {
         return [
-            'cst'               => $this->cst,
-            'baseCalculo'       => $this->baseCalculo,
-            'cClassTrib'        => $this->cClassTrib,
-            'unidade'           => $this->unidade->value,
-            'quantidade'        => $this->quantidade,
-            'impostoInformado'  => $this->impostoInformado,
+            'cst' => $this->cst,
+            'baseCalculo' => $this->baseCalculo,
+            'cClassTrib' => $this->cClassTrib,
+            'unidade' => $this->unidade->value,
+            'quantidade' => $this->quantidade,
+            'impostoInformado' => $this->impostoInformado,
         ];
     }
 
     public static function fromArray(array $data): self
     {
         return new self(
-            cst:               $data['cst'],
-            baseCalculo:       (float) $data['baseCalculo'],
-            cClassTrib:        $data['cClassTrib'],
-            unidade:           UnidadeMedida::from($data['unidade']),
-            quantidade:        (float) $data['quantidade'],
-            impostoInformado:  (float) $data['impostoInformado'],
+            cst: $data['cst'],
+            baseCalculo: (float) $data['baseCalculo'],
+            cClassTrib: $data['cClassTrib'],
+            unidade: UnidadeMedida::from($data['unidade']),
+            quantidade: (float) $data['quantidade'],
+            impostoInformado: (float) $data['impostoInformado'],
         );
     }
 
