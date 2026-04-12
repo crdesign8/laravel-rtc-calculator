@@ -1,0 +1,256 @@
+# ============================================================
+# mago.toml — Configuração de qualidade de código
+# crdesign8/laravel-rtc-calculator
+# ============================================================
+# Documentação: https://mago.carthage.software/
+# ============================================================
+
+php-version = "8.1"
+
+# ------------------------------------------------------------
+# Fontes analisadas
+# ------------------------------------------------------------
+
+[source]
+paths    = ["src", "tests"]
+excludes = ["vendor"]
+
+# ============================================================
+# LINTER — regras de estilo e qualidade
+# ============================================================
+
+[linter]
+
+# ────────────────────────────────────────────────────────────
+# Complexidade e métricas
+# ────────────────────────────────────────────────────────────
+
+# Complexidade ciclomática: ≤ 10 por método/função
+# (default: 15 — aqui usamos limiar mais restritivo para biblioteca)
+[linter.rules.cyclomatic-complexity]
+enabled   = true
+level     = "error"
+threshold = 10
+
+# Halstead: volume, dificuldade e esforço cognitivo
+# Limites abaixo dos defaults para incentivar decomposição.
+# volume    ~= tamanho lógico do código
+# difficulty~= quão difícil é escrever/entender
+# effort    ~= custo mental de ler/manter
+[linter.rules.halstead]
+enabled              = true
+level                = "warning"
+volume-threshold     = 800.0    # default: 1000.0
+difficulty-threshold = 10.0     # default: 12.0
+effort-threshold     = 4000.0   # default: 5000.0
+
+# Aninhamento excessivo: ≤ 4 níveis
+# (default: 7 — aqui forçamos código plano com early-returns)
+[linter.rules.excessive-nesting]
+enabled   = true
+level     = "warning"
+threshold = 4
+
+# Parâmetros em excesso: ≤ 5 por função/método
+[linter.rules.excessive-parameter-list]
+enabled   = true
+level     = "error"
+threshold = 5
+
+# Kan Defect — combina operadores/operandos para estimar densidade de bugs
+[linter.rules.kan-defect]
+enabled   = true
+level     = "error"
+threshold = 1.6
+
+# Métodos em excesso por classe: ≤ 10
+# (getters/setters excluídos pois são gerados por conveniência)
+[linter.rules.too-many-methods]
+enabled                     = true
+level                       = "error"
+threshold                   = 10
+count-hooks                 = false
+count-setters-and-getters   = false
+
+# Propriedades em excesso por classe: ≤ 10
+[linter.rules.too-many-properties]
+enabled   = true
+level     = "error"
+threshold = 10
+
+# Casos de enum em excesso: ≤ 20
+[linter.rules.too-many-enum-cases]
+enabled   = true
+level     = "error"
+threshold = 20
+
+# ────────────────────────────────────────────────────────────
+# Tipagem forte
+# ────────────────────────────────────────────────────────────
+
+# declare(strict_types=1) obrigatório — elevado para error
+[linter.rules.strict-types]
+enabled         = true
+level           = "error"
+allow-disabling = false
+
+# Parâmetros nullable devem ser explícitos (?Type em vez de default: null)
+[linter.rules.explicit-nullable-param]
+enabled = true
+level   = "warning"
+
+# Parâmetros booleanos encorajam feature-envy; prefira enums ou dois métodos
+[linter.rules.no-boolean-flag-parameter]
+enabled              = true
+level                = "warning"
+exclude-setters      = false
+exclude-constructors = true
+
+# Identidade (===) preferida a igualdade (==) quando possível
+[linter.rules.identity-comparison]
+enabled = true
+level   = "warning"
+
+# ────────────────────────────────────────────────────────────
+# Segurança (OWASP)
+# ────────────────────────────────────────────────────────────
+
+# Operador de supressão de erros @ mascara falhas silenciosamente
+[linter.rules.no-error-control-operator]
+enabled = true
+level   = "error"
+
+# eval() abre vetor de execução arbitrária de código
+[linter.rules.no-eval]
+enabled = true
+level   = "error"
+
+# FFI permite escape do sandbox do PHP
+[linter.rules.no-ffi]
+enabled = true
+level   = "error"
+
+# Variáveis globais violam encapsulamento e criam estado oculto
+[linter.rules.no-global]
+enabled = true
+level   = "error"
+
+# Backtick `` e shell_exec() podem executar comandos do SO
+[linter.rules.no-shell-execute-string]
+enabled = true
+level   = "error"
+
+# == / != com hashes/passwords são vulneráveis a timing-attacks
+[linter.rules.no-insecure-comparison]
+enabled = true
+level   = "error"
+
+# Senhas literais no código (hardcoded credentials)
+[linter.rules.no-literal-password]
+enabled = true
+level   = "error"
+
+# Dados do usuário chegando diretamente a funções "sink" (SQL, exec, etc.)
+[linter.rules.tainted-data-to-sink]
+enabled              = true
+level                = "error"
+known-sink-functions = ["printf"]
+
+# Parâmetros sensíveis (password, token, secret) devem ter #[\SensitiveParameter]
+[linter.rules.sensitive-parameter]
+enabled = true
+level   = "error"
+
+# $_REQUEST mistura GET/POST/COOKIE e é inseguro por natureza
+[linter.rules.no-request-variable]
+enabled = true
+level   = "error"
+
+# Control-flow em finally pode mascarar exceções e criar bugs sutis
+[linter.rules.no-unsafe-finally]
+enabled = true
+level   = "error"
+
+# Funções de debug não devem existir em código de produção
+[linter.rules.no-debug-symbols]
+enabled = true
+level   = "error"
+
+# Funções explicitamente proibidas neste pacote
+[linter.rules.disallowed-functions]
+enabled    = true
+level      = "error"
+functions  = [
+  "var_dump",
+  "print_r",
+  "var_export",
+  "dd",
+  "dump",
+  "die",
+  "exit",
+]
+
+# ────────────────────────────────────────────────────────────
+# Boas práticas / legibilidade
+# ────────────────────────────────────────────────────────────
+
+# Ternários aninhados são ilegíveis — use if/else
+[linter.rules.no-nested-ternary]
+enabled = true
+level   = "warning"
+
+# Blocos sem corpo indicam código incompleto
+[linter.rules.no-empty-loop]
+enabled = true
+level   = "warning"
+
+# Catch vazio silencia exceções — sempre logar ou re-lançar
+[linter.rules.no-empty-catch-clause]
+enabled = true
+level   = "warning"
+
+# Atribuição dentro de condição confunde leitura
+[linter.rules.no-assign-in-condition]
+enabled = true
+level   = "warning"
+
+# Variáveis variáveis ($$var) são difíceis de rastrear
+[linter.rules.no-variable-variable]
+enabled = true
+level   = "warning"
+
+# ============================================================
+# ANALYZER — análise estática profunda (tipos, fluxo, uso)
+# ============================================================
+
+[analyzer]
+
+# Checar type-hints ausentes em funções/métodos
+check-missing-type-hints               = true
+
+# Checar type-hints ausentes em closures (ex.: callbacks)
+check-closure-missing-type-hints       = true
+
+# Checar type-hints ausentes em arrow functions
+check-arrow-function-missing-type-hints = true
+
+# Detectar parâmetros nunca utilizados
+find-unused-parameters = true
+
+# Detectar expressões sem uso (possível código morto)
+find-unused-expressions = true
+
+# Detectar definições (funções/classes) nunca referenciadas
+find-unused-definitions = true
+
+# Analisar código morto (blocos inalcançáveis)
+analyze-dead-code = true
+
+# Verificar declarações `use` não utilizadas ou redundantes
+check-use-statements = true
+
+# Verificar se métodos que sobrescrevem pai usam #[\Override]
+check-missing-override = true
+
+# Verificar inicialização de propriedades no construtor
+check-property-initialization = true
