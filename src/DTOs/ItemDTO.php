@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
+use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 
 use function array_key_exists;
+use function preg_match;
+use function trim;
 
 class ItemDTO
 {
@@ -213,5 +216,60 @@ class ItemDTO
         );
 
         return $this;
+    }
+
+    public function validate(): void
+    {
+        $errors = [];
+
+        if ($this->numero < 1) {
+            $errors['numero'] = ['numero do item deve ser maior que zero.'];
+        }
+
+        $ncm = trim($this->ncm);
+
+        if (! preg_match('/^\d{8}$/', $ncm)) {
+            $errors['ncm'] = ['NCM deve conter exatamente 8 dígitos numéricos.'];
+        }
+
+        if ($this->quantidade <= 0) {
+            $errors['quantidade'] = ['quantidade deve ser maior que zero.'];
+        }
+
+        if (! preg_match('/^\d{3}$/', trim($this->cst))) {
+            $errors['cst'] = ['CST deve conter exatamente 3 dígitos numéricos.'];
+        }
+
+        if ($this->baseCalculo < 0) {
+            $errors['baseCalculo'] = ['baseCalculo não pode ser negativo.'];
+        }
+
+        if (! preg_match('/^\d{6}$/', trim($this->cClassTrib))) {
+            $errors['cClassTrib'] = ['cClassTrib deve conter exatamente 6 dígitos numéricos.'];
+        }
+
+        if ($this->tributacaoRegular !== null) {
+            try {
+                $this->tributacaoRegular->validate();
+            } catch (RtcValidationException $e) {
+                foreach ($e->getErrors() as $field => $messages) {
+                    $errors['tributacaoRegular.'.$field] = $messages;
+                }
+            }
+        }
+
+        if ($this->impostoSeletivo !== null) {
+            try {
+                $this->impostoSeletivo->validate();
+            } catch (RtcValidationException $e) {
+                foreach ($e->getErrors() as $field => $messages) {
+                    $errors['impostoSeletivo.'.$field] = $messages;
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw new RtcValidationException('ItemDTO inválido.', $errors);
+        }
     }
 }

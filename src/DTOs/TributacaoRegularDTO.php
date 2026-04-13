@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
+use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
+
+use function preg_match;
+use function trim;
+
 class TributacaoRegularDTO
 {
     public function __construct(
@@ -38,5 +43,22 @@ class TributacaoRegularDTO
     public function getCClassTrib(): string
     {
         return $this->cClassTrib;
+    }
+
+    public function validate(): void
+    {
+        $errors = [];
+
+        if (! preg_match('/^\d{3}$/', trim($this->cst))) {
+            $errors['cst'] = ['CST da tributacaoRegular deve conter exatamente 3 dígitos numéricos.'];
+        }
+
+        if (! preg_match('/^\d{6}$/', trim($this->cClassTrib))) {
+            $errors['cClassTrib'] = ['cClassTrib da tributacaoRegular deve conter exatamente 6 dígitos numéricos.'];
+        }
+
+        if ($errors !== []) {
+            throw new RtcValidationException('TributacaoRegularDTO inválido.', $errors);
+        }
     }
 }

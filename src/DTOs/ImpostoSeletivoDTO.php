@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
+use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
+
+use function preg_match;
+use function trim;
 
 class ImpostoSeletivoDTO
 {
@@ -75,5 +79,34 @@ class ImpostoSeletivoDTO
     public function getImpostoInformado(): float
     {
         return $this->impostoInformado;
+    }
+
+    public function validate(): void
+    {
+        $errors = [];
+
+        if (! preg_match('/^\d{3}$/', trim($this->cst))) {
+            $errors['cst'] = ['CST do impostoSeletivo deve conter exatamente 3 dígitos numéricos.'];
+        }
+
+        if ($this->baseCalculo < 0) {
+            $errors['baseCalculo'] = ['baseCalculo do impostoSeletivo não pode ser negativo.'];
+        }
+
+        if (! preg_match('/^\d{6}$/', trim($this->cClassTrib))) {
+            $errors['cClassTrib'] = ['cClassTrib do impostoSeletivo deve conter exatamente 6 dígitos numéricos.'];
+        }
+
+        if ($this->quantidade <= 0) {
+            $errors['quantidade'] = ['quantidade do impostoSeletivo deve ser maior que zero.'];
+        }
+
+        if ($this->impostoInformado < 0) {
+            $errors['impostoInformado'] = ['impostoInformado não pode ser negativo.'];
+        }
+
+        if ($errors !== []) {
+            throw new RtcValidationException('ImpostoSeletivoDTO inválido.', $errors);
+        }
     }
 }

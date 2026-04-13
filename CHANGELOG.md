@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-13
+
 ### Adicionado
 
 - `addItems(ItemDTO[] $itens)` no builder fluente — adiciona múltiplos itens em uma chamada
@@ -15,6 +17,21 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `Events/RtcCalculated` — evento Laravel disparado após cada cálculo bem-sucedido (inclui dto + result)
 - README: seção "Como subir a Calculadora Java" com comandos Docker e JAR
 - README: seção "Como funciona por baixo dos panos" com tabela de endpoints e fluxo de requisição
+- `validate()` nos DTOs `CalculoRequestDTO`, `ItemDTO`, `TributacaoRegularDTO` e `ImpostoSeletivoDTO`
+- `tests/Feature/RtcBuilderStateTest` para cobrir isolamento de estado do builder singleton entre múltiplos cálculos
+- Novos cenários de teste para payload inválido em `tests/Feature/CalcularTributosTest` e validações em `tests/Unit/DTOs/CalculoRequestDTOTest`
+
+### Alterado
+
+- `Actions/CalcularTributosAction` agora executa validação do DTO antes de chamar a API Java
+- `Rtc::calcular()` agora aplica reset interno do builder em bloco `finally` para evitar reaproveitamento de estado
+- README atualizado com instruções ampliadas para execução da calculadora oficial e exemplo mais completo de `calcularPorNfe`
+- `composer.json` com descrição e keywords mais completas para descoberta do pacote, além de `minimum-stability: stable`
+
+### Corrigido
+
+- Bloqueio de envio de payload inválido para a API RTC (ex.: NCM inválido/vazio, `baseCalculo` negativa, item ausente)
+- Possível vazamento de itens e campos fiscais entre cálculos consecutivos quando `Rtc` é resolvido como singleton
 
 ## [1.0.0] - 2026-04-12
 
@@ -72,6 +89,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `php artisan rtc:injetar {nfe.xml} {calculo.json} {saida.xml}` — gera e injeta XML RTC na NFe; `--tipo=`
 - `php artisan rtc:healthcheck` — verifica se a calculadora Java está acessível; `--url=`
 
-[Unreleased]: https://github.com/crdesign8/laravel-rtc-calculator/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/crdesign8/laravel-rtc-calculator/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/crdesign8/laravel-rtc-calculator/releases/tag/v1.1.0
 [1.0.0]: https://github.com/crdesign8/laravel-rtc-calculator/releases/tag/v1.0.0
 

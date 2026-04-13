@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\Tests\Unit\DTOs;
 
-use PHPUnit\Framework\TestCase;
 use Crdesign8\LaravelRtcCalculator\DTOs\CalculoRequestDTO;
 use Crdesign8\LaravelRtcCalculator\DTOs\ImpostoSeletivoDTO;
 use Crdesign8\LaravelRtcCalculator\DTOs\ItemDTO;
 use Crdesign8\LaravelRtcCalculator\DTOs\TributacaoRegularDTO;
-use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
 use Crdesign8\LaravelRtcCalculator\Enums\Uf;
+use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
+use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
+use PHPUnit\Framework\TestCase;
 
 class CalculoRequestDTOTest extends TestCase
 {
@@ -18,7 +19,7 @@ class CalculoRequestDTOTest extends TestCase
     {
         return json_decode(
             file_get_contents(__DIR__.'/../../Fixtures/entrada-regime-geral.json'),
-            associative: true
+            associative: true,
         );
     }
 
@@ -84,7 +85,7 @@ class CalculoRequestDTOTest extends TestCase
     public function test_to_array_roundtrip_preserva_estrutura(): void
     {
         $original = $this->fixture();
-        $result   = CalculoRequestDTO::fromArray($original)->toArray();
+        $result = CalculoRequestDTO::fromArray($original)->toArray();
 
         $this->assertSame($original['id'], $result['id']);
         $this->assertSame($original['versao'], $result['versao']);
@@ -122,11 +123,11 @@ class CalculoRequestDTOTest extends TestCase
             ->cClassTrib('550020');
 
         $dto = CalculoRequestDTO::make(
-            municipio:        4314902,
-            uf:               'RS',
-            itens:            [$item],
-            dataHoraEmissao:  '2027-01-01T03:00:00-03:00',
-            id:               'test-id-123',
+            municipio: 4314902,
+            uf: 'RS',
+            itens: [$item],
+            dataHoraEmissao: '2027-01-01T03:00:00-03:00',
+            id: 'test-id-123',
         );
 
         $this->assertSame('test-id-123', $dto->getId());
@@ -138,10 +139,10 @@ class CalculoRequestDTOTest extends TestCase
     public function test_make_aceita_uf_em_minusculo(): void
     {
         $dto = CalculoRequestDTO::make(
-            municipio:       4314902,
-            uf:              'rs',
+            municipio: 4314902,
+            uf: 'rs',
             dataHoraEmissao: '2027-01-01T03:00:00-03:00',
-            id:              'qualquer',
+            id: 'qualquer',
         );
 
         $this->assertSame(Uf::RS, $dto->getUf());
@@ -150,10 +151,10 @@ class CalculoRequestDTOTest extends TestCase
     public function test_make_versao_padrao_e_1_0_0(): void
     {
         $dto = CalculoRequestDTO::make(
-            municipio:       4314902,
-            uf:              'RS',
+            municipio: 4314902,
+            uf: 'RS',
             dataHoraEmissao: '2027-01-01T03:00:00-03:00',
-            id:              'qualquer',
+            id: 'qualquer',
         );
 
         $this->assertSame('1.0.0', $dto->getVersao());
@@ -166,13 +167,13 @@ class CalculoRequestDTOTest extends TestCase
     public function test_to_array_item_sem_campos_opcionais_nao_inclui_chaves(): void
     {
         $item = ItemDTO::fromArray([
-            'numero'      => 2,
-            'ncm'         => '12345678',
-            'quantidade'  => 10.0,
-            'unidade'     => 'KG',
-            'cst'         => '000',
+            'numero' => 2,
+            'ncm' => '12345678',
+            'quantidade' => 10.0,
+            'unidade' => 'KG',
+            'cst' => '000',
             'baseCalculo' => 500.0,
-            'cClassTrib'  => '000001',
+            'cClassTrib' => '000001',
         ]);
 
         $array = $item->toArray();
@@ -197,5 +198,70 @@ class CalculoRequestDTOTest extends TestCase
         $this->assertSame(UnidadeMedida::KG, $item->getUnidade());
         $this->assertNull($item->getTributacaoRegular());
         $this->assertNull($item->getImpostoSeletivo());
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // validate()
+    // ──────────────────────────────────────────────────────────────────────────
+
+    public function test_validate_com_payload_valido_nao_lanca_excecao(): void
+    {
+        $dto = CalculoRequestDTO::fromArray($this->fixture());
+
+        $dto->validate();
+
+        $this->assertTrue(true);
+    }
+
+    public function test_validate_lanca_exception_quando_ncm_esta_vazio(): void
+    {
+        $item = ItemDTO::make(1)
+            ->ncm('')
+            ->quantidade(1)
+            ->unidade(UnidadeMedida::VN)
+            ->cst('550')
+            ->baseCalculo(100.0)
+            ->cClassTrib('550020');
+
+        $dto = CalculoRequestDTO::make(
+            municipio: 4314902,
+            uf: 'RS',
+            itens: [$item],
+            dataHoraEmissao: '2027-01-01T03:00:00-03:00',
+            id: 'qualquer',
+        );
+
+        try {
+            $dto->validate();
+            $this->fail('Era esperada uma RtcValidationException para NCM vazio.');
+        } catch (RtcValidationException $e) {
+            $this->assertArrayHasKey('itens.1.ncm', $e->getErrors());
+        }
+    }
+
+    public function test_validate_lanca_exception_quando_base_calculo_e_negativa(): void
+    {
+        $item = ItemDTO::make(1)
+            ->ncm('24021000')
+            ->quantidade(1)
+            ->unidade(UnidadeMedida::VN)
+            ->cst('550')
+            ->baseCalculo(-10.0)
+            ->cClassTrib('550020');
+
+        $dto = CalculoRequestDTO::make(
+            municipio: 4314902,
+            uf: 'RS',
+            itens: [$item],
+            dataHoraEmissao: '2027-01-01T03:00:00-03:00',
+            id: 'qualquer',
+        );
+
+        try {
+            $dto->validate();
+            $this->fail('Era esperada uma RtcValidationException para baseCalculo negativa.');
+        } catch (RtcValidationException $e) {
+            $this->assertArrayHasKey('itens.1.baseCalculo', $e->getErrors());
+        }
     }
 }

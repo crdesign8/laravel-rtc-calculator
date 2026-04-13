@@ -1,7 +1,7 @@
 {
     "name": "crdesign8/laravel-rtc-calculator",
-    "description": "Pacote Laravel para integração com a Calculadora da Reforma Tributária do Consumo (RTC) da Receita Federal do Brasil.",
-    "keywords": ["laravel", "rtc", "reforma-tributaria", "calculadora", "tributos", "nfe", "ibs", "cbs", "imposto-seletivo"],
+    "description": "Integração Laravel com a Calculadora RTC da Receita Federal para cálculo, geração e validação de tributos da Reforma Tributária (IS, IBS e CBS).",
+    "keywords": ["laravel", "rtc", "reforma-tributaria", "calculadora", "tributos", "nfe", "nfce", "cte", "ibs", "cbs", "imposto-seletivo", "receita-federal", "imposto-consumo"],
     "homepage": "https://github.com/crdesign8/laravel-rtc-calculator",
     "license": "MIT",
     "authors": [
@@ -47,6 +47,6 @@
             "composer/package-versions-deprecated": true
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

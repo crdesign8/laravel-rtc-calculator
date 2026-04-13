@@ -136,7 +136,11 @@ class Rtc
      */
     public function calcular(): CalculoResult
     {
-        return $this->doCalculo($this->buildDto());
+        try {
+            return $this->doCalculo($this->buildDto());
+        } finally {
+            $this->reset();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -258,5 +262,14 @@ class Rtc
             dataHoraEmissao: $this->dataHoraEmissao ?? now()->toIso8601String(),
             id: $this->id ?? Str::uuid()->toString(),
         );
+    }
+
+    private function reset(): void
+    {
+        $this->municipio = null;
+        $this->uf = null;
+        $this->dataHoraEmissao = null;
+        $this->id = null;
+        $this->itens = [];
     }
 }

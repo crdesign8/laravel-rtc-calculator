@@ -35,52 +35,81 @@ Ao contrário de outros exemplos disponíveis em Python, este pacote permite que
 
 ---
 
-## 🐳 Como subir a Calculadora Java
+## 🐳 Como rodar a Calculadora RTC (Java) da Receita Federal
 
-O pacote não inclui a Calculadora RTC — ela é disponibilizada pela **Receita Federal** como parte do programa-piloto da Reforma Tributária do Consumo.
+O pacote não inclui a Calculadora oficial — ela é um componente fornecido pela Receita Federal (calculadora offline). Você pode rodá-la localmente usando Docker ou diretamente com Java, conforme as instruções abaixo.
 
-### Opção 1 — Docker (recomendado)
+### 1. Onde baixar a Calculadora
 
-Se você já tem a imagem `calculadora-rtc` (obtida via [consumo.tributos.gov.br](https://consumo.tributos.gov.br/servico/calcular-tributos-consumo/calculadora)):
+Acesse o portal oficial da Receita Federal e baixe a versão mais recente da Calculadora Offline:
+-> [Calculadora Offline - Portal da Receita Federal](https://piloto-cbs.tributos.gov.br/servico/calculadora-consumo/calculadora/calculadora-offline)
 
+Lá você encontrará:
+
+    - Imagem Docker (recomendado)
+    - Arquivo JAR (api-regime-geral.jar)
+
+Consulte também:
+    - [Instruções oficiais de instalação](https://piloto-cbs.tributos.gov.br/servico/calculadora-consumo/calculadora/calculadora-offline/calculadora-offline-instrucoes)
+    - [Documentação da API / Swagger](https://piloto-cbs.tributos.gov.br/servico/calculadora-consumo/calculadora/documentacao)
+
+### 2. Opção Recomendada: Docker
 ```bash
+# Exemplo básico (ajuste conforme a versão baixada)
 docker run -d \
-  --name calculadora-api \
+  --name calculadora-rtc \
   -p 8080:8080 \
-  -w /calculadora \
-  calculadora-rtc \
-  /bin/sh -c "
-    JAVA_HOME=/opt/java/openjdk
-    export PATH=\$JAVA_HOME/bin:\$PATH
-    java -jar /calculadora/api-regime-geral.jar --spring.profiles.active=offline
-  "
+  -v $(pwd)/calculadora-data:/calculadora/data \   # opcional: persistir banco SQLite
+  calculadora-rtc:latest
+
+# Ou, se você extraiu o pacote da Receita:
+docker run -d \
+  --name calculadora-rtc \
+  -p 8080:8080 \
+  -v ./calculadora:/calculadora \
+  openjdk:21-jdk-slim \
+  java -jar /calculadora/api-regime-geral.jar --spring.profiles.active=offline
 ```
 
-Verifique se está respondendo:
+Verifique se está rodando:
 
 ```bash
-curl -s http://localhost:8080/actuator/health | python3 -m json.tool
+curl -s http://localhost:8080/actuator/health | jq
+# ou
+php artisan rtc:healthcheck
 # Esperado: { "status": "UP" }
 ```
 
-### Opção 2 — JAR direto (sem Docker)
+### 3. Opção sem Docker (JAR direto)
 
 ```bash
-java -jar api-regime-geral.jar --spring.profiles.active=offline
+java -jar api-regime-geral.jar \
+  --spring.profiles.active=offline \
+  --server.port=8080
+```
+Requisito: Java 21 ou superior.
+
+### 4. Configuração no seu projeto Laravel
+
+No arquivo .env:
+
+```env
+RTC_BASE_URL=http://localhost:8080
+RTC_TIMEOUT=60
+RTC_RETRY_TIMES=3
 ```
 
-O servidor sobe em `http://localhost:8080` por padrão. Use `--server.port=PORTA` para alterar.
-
-### Checar via Artisan
+depois rode o comando de healthcheck para verificar a conexão:
 
 ```bash
 php artisan rtc:healthcheck
-# Calculadora RTC disponível em http://localhost:8080 ✔
+# Esperado: Calculadora RTC disponível em http://localhost:8080 ✔
 ```
+
 
 ---
 
-## 📦 Instalação
+## 📦 Instalação do Pacote
 
 ```bash
 composer require crdesign8/laravel-rtc-calculator
@@ -152,20 +181,39 @@ $resultado = Rtc::make()
 
 ### Calcular a partir do XML de uma NFe existente
 
-Extrai municipio, UF, data de emissão e dados de produto diretamente da nota; você só precisa informar os campos exclusivos do RTC:
+Extrai municipio, UF, data de emissão e dados de produto diretamente da nota. Você só precisa informar os campos exclusivos do RTC (`cst` e `cClassTrib`) para cada `nItem` da NFe:
 
 ```php
-$result = Rtc::make()->calcularPorNfe(
-    xmlNfe: file_get_contents('nfe-sem-rtc.xml'),
+$xmlNfe = file_get_contents(storage_path('app/nfe-sem-rtc.xml'));
+
+$resultado = Rtc::make()->calcularPorNfe(
+    xmlNfe: $xmlNfe,
     rtcPorItem: [
         1 => [
             'cst'               => '200',
             'cClassTrib'        => '200032',
             'tributacaoRegular' => ['cst' => '200', 'cClassTrib' => '200032'],
         ],
+        2 => [
+            'cst'        => '550',
+            'cClassTrib' => '550020',
+            'impostoSeletivo' => [
+                'cst'              => '000',
+                'baseCalculo'      => 250.00,
+                'cClassTrib'       => '000001',
+                'unidade'          => 'VN',
+                'quantidade'       => 10,
+                'impostoInformado' => 0,
+            ],
+        ],
     ],
 );
+
+echo $resultado->getTotal()->getVBcIbsCbs(); // base total IBS+CBS
+echo $resultado->getTotal()->getVIsTot();    // total IS
 ```
+
+> Importante: o array `rtcPorItem` deve conter todos os itens (`nItem`) existentes no XML da NFe.
 
 ### Gerar e Injetar XML na NFe
 

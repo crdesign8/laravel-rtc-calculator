@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\Tests\Feature;
 
-use Crdesign8\LaravelRtcCalculator\Tests\TestCase;
 use Crdesign8\LaravelRtcCalculator\Actions\CalcularTributosAction;
 use Crdesign8\LaravelRtcCalculator\Contracts\RtcClientContract;
 use Crdesign8\LaravelRtcCalculator\Data\CalculoResult;
 use Crdesign8\LaravelRtcCalculator\DTOs\CalculoRequestDTO;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcCalculationException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
+use Crdesign8\LaravelRtcCalculator\Tests\TestCase;
 use Illuminate\Support\Facades\Http;
 
 class CalcularTributosTest extends TestCase
@@ -21,8 +21,14 @@ class CalcularTributosTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->saida   = json_decode(file_get_contents(__DIR__.'/../Fixtures/saida-regime-geral.json'), associative: true);
-        $this->entrada = json_decode(file_get_contents(__DIR__.'/../Fixtures/entrada-regime-geral.json'), associative: true);
+        $this->saida = json_decode(
+            file_get_contents(__DIR__.'/../Fixtures/saida-regime-geral.json'),
+            associative: true,
+        );
+        $this->entrada = json_decode(
+            file_get_contents(__DIR__.'/../Fixtures/entrada-regime-geral.json'),
+            associative: true,
+        );
     }
 
     private function makeDto(): CalculoRequestDTO
@@ -161,5 +167,23 @@ class CalcularTributosTest extends TestCase
         $this->expectException(RtcCalculationException::class);
 
         $this->action()->handle($this->makeDto());
+    }
+
+    public function test_payload_invalido_lanca_rtc_validation_exception_sem_chamar_http(): void
+    {
+        Http::fake();
+
+        $entrada = $this->entrada;
+        $entrada['itens'][0]['baseCalculo'] = -1;
+
+        $dto = CalculoRequestDTO::fromArray($entrada);
+
+        $this->expectException(RtcValidationException::class);
+
+        try {
+            $this->action()->handle($dto);
+        } finally {
+            Http::assertNothingSent();
+        }
     }
 }

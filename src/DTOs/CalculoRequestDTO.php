@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\Uf;
+use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
+use DateTimeImmutable;
+use Throwable;
 
 use function array_key_exists;
 use function array_map;
+use function count;
 use function now;
+use function preg_match;
 use function strtoupper;
+use function trim;
 
 class CalculoRequestDTO
 {
@@ -133,5 +139,60 @@ class CalculoRequestDTO
             uf: Uf::from(strtoupper($uf)),
             itens: $itens,
         );
+    }
+
+    public function validate(): void
+    {
+        $errors = [];
+
+        if (trim($this->id) === '') {
+            $errors['id'] = ['id é obrigatório e não pode ser vazio.'];
+        }
+
+        if (! preg_match('/^\d+\.\d+\.\d+$/', trim($this->versao))) {
+            $errors['versao'] = ['versao deve estar no formato semântico x.y.z (ex.: 1.0.0).'];
+        }
+
+        if (trim($this->dataHoraEmissao) === '') {
+            $errors['dataHoraEmissao'] = ['dataHoraEmissao é obrigatória e deve estar em ISO 8601.'];
+        } else {
+            try {
+                new DateTimeImmutable($this->dataHoraEmissao);
+            } catch (Throwable) {
+                $errors['dataHoraEmissao'] = [
+                    'dataHoraEmissao inválida. Use formato ISO 8601 (ex.: 2027-01-01T03:00:00-03:00).',
+                ];
+            }
+        }
+
+        if ($this->municipio <= 0) {
+            $errors['municipio'] = ['municipio deve ser um código IBGE válido (maior que zero).'];
+        }
+
+        if (count($this->itens) === 0) {
+            $errors['itens'] = ['A requisição deve conter ao menos um item.'];
+        }
+
+        foreach ($this->itens as $index => $item) {
+            try {
+                $item->validate();
+            } catch (RtcValidationException $e) {
+                $itemErrors = $e->getErrors();
+
+                if ($itemErrors === []) {
+                    $errors['itens.'.($index + 1)] = [$e->getMessage()];
+
+                    continue;
+                }
+
+                foreach ($itemErrors as $field => $messages) {
+                    $errors['itens.'.($index + 1).'.'.$field] = $messages;
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw new RtcValidationException('CalculoRequestDTO inválido.', $errors);
+        }
     }
 }

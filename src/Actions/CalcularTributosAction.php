@@ -16,6 +16,8 @@ class CalcularTributosAction
 
     public function handle(CalculoRequestDTO $dto): CalculoResult
     {
+        $dto->validate();
+
         return $this->client->calcularRegimeGeral($dto);
     }
 }
