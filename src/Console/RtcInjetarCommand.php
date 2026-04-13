@@ -13,12 +13,12 @@ use Crdesign8\LaravelRtcCalculator\Exceptions\RtcCalculationException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcConnectionException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use Illuminate\Console\Command;
-use function file_exists;
+use InvalidArgumentException;
+use JsonException;
+
 use function file_get_contents;
 use function file_put_contents;
 use function json_decode;
-use function json_last_error;
-use function json_last_error_msg;
 use function strtoupper;
 
 class RtcInjetarCommand extends Command
@@ -33,75 +33,58 @@ class RtcInjetarCommand extends Command
 
     public function handle(RtcClientContract $client): int
     {
+        /** @var string $caminhoNfe */
         $caminhoNfe = $this->argument('nfe');
+
+        /** @var string $caminhoJson */
         $caminhoJson = $this->argument('rtc_json');
+
+        /** @var string $caminhoSaida */
         $caminhoSaida = $this->argument('saida');
 
-        // Valida arquivos de entrada
-        if (!file_exists($caminhoNfe)) {
-            $this->error("Arquivo NFe não encontrado: {$caminhoNfe}");
-
-            return self::FAILURE;
-        }
-
-        if (!file_exists($caminhoJson)) {
-            $this->error("Arquivo JSON do cálculo RTC não encontrado: {$caminhoJson}");
-
-            return self::FAILURE;
-        }
-
-        // Lê e valida o JSON do resultado
-        $json = file_get_contents($caminhoJson);
-        $data = json_decode($json, associative: true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error('Arquivo JSON inválido: ' . json_last_error_msg());
-
-            return self::FAILURE;
-        }
-
-        // Resolve o tipo de documento
-        $tipoStr = strtoupper($this->option('tipo'));
-        $tipo = TipoDocumento::tryFrom($tipoStr);
-
-        if ($tipo === null) {
-            $this->error("Tipo de documento inválido: '{$tipoStr}'. Use: NFe, NFCe ou CTe");
-
-            return self::FAILURE;
-        }
-
-        $xmlNfe = file_get_contents($caminhoNfe);
-
-        $this->info('Gerando XML RTC...');
-
         try {
+            $jsonRtc = (string) file_get_contents($caminhoJson);
+            $xmlNfe = (string) file_get_contents($caminhoNfe);
+
+            /** @var array<array-key, mixed>|bool|float|int|string|null $decoded */
+            $decoded = json_decode($jsonRtc, associative: true, flags: JSON_THROW_ON_ERROR);
+
+            if (! \is_array($decoded)) {
+                throw new InvalidArgumentException('JSON RTC inválido: o conteúdo deve ser um objeto JSON.');
+            }
+
+            /** @var array<string, mixed> $data */
+            $data = $decoded;
+
+            $tipoOption = $this->option('tipo');
+            $tipoInput = \is_string($tipoOption) && $tipoOption !== '' ? $tipoOption : 'NFe';
+            $tipo = [
+                'NFE' => TipoDocumento::NFe,
+                'NFCE' => TipoDocumento::NFCe,
+                'CTE' => TipoDocumento::CTe,
+            ][strtoupper($tipoInput)] ?? throw new InvalidArgumentException(
+                "Tipo de documento inválido: '{$tipoInput}'. Use: NFe, NFCe ou CTe",
+            );
+
+            $this->info('Gerando XML RTC...');
             $result = CalculoResult::fromArray($data);
             $xmlRtc = (new GerarXmlRtcAction($client))->handle($result, $tipo);
-        } catch (RtcConnectionException $e) {
-            $this->error('Falha de conexão: ' . $e->getMessage());
 
-            return self::FAILURE;
-        } catch (RtcValidationException $e) {
-            $this->error('Erro de validação ao gerar XML: ' . $e->getMessage());
-
-            return self::FAILURE;
-        } catch (RtcCalculationException $e) {
-            $this->error('Erro ao gerar XML: ' . $e->getMessage());
+            $this->info('Injetando grupos RTC na NFe...');
+            $nfeComRtc = (new InjetarXmlNfeAction)->handle($xmlRtc, $xmlNfe);
+        } catch (
+            JsonException|InvalidArgumentException|RtcConnectionException|RtcValidationException|RtcCalculationException $e
+        ) {
+            $this->error('Erro ao gerar/injetar XML RTC: '.$e->getMessage());
 
             return self::FAILURE;
         }
 
-        $this->info('Injetando grupos RTC na NFe...');
-
-        try {
-            $nfeComRtc = (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
-        } catch (RtcValidationException $e) {
-            $this->error('Erro na injeção XML: ' . $e->getMessage());
+        if (file_put_contents($caminhoSaida, $nfeComRtc) === false) {
+            $this->error("Falha ao salvar o XML de saída em: {$caminhoSaida}");
 
             return self::FAILURE;
         }
-
-        file_put_contents($caminhoSaida, $nfeComRtc);
 
         $this->newLine();
         $this->info("NFe com RTC injetado salva em: {$caminhoSaida}");

@@ -17,6 +17,9 @@ class ImpostoSeletivoDTO
         private float $impostoInformado,
     ) {}
 
+    /**
+     * @return array{cst: string, baseCalculo: float, cClassTrib: string, unidade: string, quantidade: float, impostoInformado: float}
+     */
     public function toArray(): array
     {
         return [
@@ -29,6 +32,9 @@ class ImpostoSeletivoDTO
         ];
     }
 
+    /**
+     * @param array{cst: string, baseCalculo: float|int|string, cClassTrib: string, unidade: string, quantidade: float|int|string, impostoInformado?: float|int|string} $data
+     */
     public static function fromArray(array $data): self
     {
         return new self(
@@ -37,7 +43,7 @@ class ImpostoSeletivoDTO
             cClassTrib: $data['cClassTrib'],
             unidade: UnidadeMedida::from($data['unidade']),
             quantidade: (float) $data['quantidade'],
-            impostoInformado: (float) $data['impostoInformado'],
+            impostoInformado: (float) ($data['impostoInformado'] ?? 0.0),
         );
     }
 

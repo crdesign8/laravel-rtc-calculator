@@ -11,11 +11,19 @@ use Crdesign8\LaravelRtcCalculator\DTOs\ItemDTO;
 use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use DOMDocument;
+use DOMElement;
+use DOMNode;
+use DOMNodeList;
 use DOMXPath;
+use LibXMLError;
+
 use function array_key_exists;
 use function array_map;
-use function file_get_contents;
 use function implode;
+use function is_float;
+use function is_int;
+use function is_scalar;
+use function is_string;
 use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
@@ -90,18 +98,22 @@ class CalcularPorNfeXmlAction
         $previous = libxml_use_internal_errors(true);
         $loaded = $doc->loadXML($xmlNfe);
         $xmlErrors = libxml_get_errors();
+
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
         if (! $loaded || $xmlErrors !== []) {
-            $messages = array_map(static fn ($e) => trim($e->message), $xmlErrors);
+            $messages = array_map(
+                static fn (LibXMLError $e): string => trim($e->message),
+                $xmlErrors,
+            );
+
             throw new RtcValidationException('XML da NFe inválido ou malformado: '.implode('; ', $messages));
         }
 
         $xpath = new DOMXPath($doc);
         $xpath->registerNamespace('nfe', 'http://www.portalfiscal.inf.br/nfe');
 
-        /** @var int $municipio */
         $municipio = (int) $xpath->evaluate('string(//nfe:ide/nfe:cMunFG)');
         $uf = (string) $xpath->evaluate('string(//nfe:emit/nfe:enderEmit/nfe:UF)');
         $dhEmi = (string) $xpath->evaluate('string(//nfe:ide/nfe:dhEmi)');
@@ -111,20 +123,20 @@ class CalcularPorNfeXmlAction
             .'data de emissão (<dhEmi>) do XML da NFe.');
         }
 
-        $detNodes = $xpath->query('//nfe:det');
+        $detNodes = $this->queryNodeList($xpath, '//nfe:det');
 
-        if ($detNodes === false || $detNodes->length === 0) {
+        if (! $detNodes instanceof DOMNodeList || $detNodes->length === 0) {
             throw new RtcValidationException('Nenhum elemento <det> encontrado no XML da NFe.');
         }
 
         $itens = [];
 
-        foreach ($detNodes as $det) {
-            if (! $det instanceof \DOMElement) {
+        foreach ($detNodes as $detNode) {
+            if (! $detNode instanceof DOMElement) {
                 continue;
             }
 
-            $itens[] = $this->processarDetItem($det, $xpath, $rtcPorItem);
+            $itens[] = $this->processarDetItem($detNode, $xpath, $rtcPorItem);
         }
 
         $dto = CalculoRequestDTO::make(
@@ -139,13 +151,16 @@ class CalcularPorNfeXmlAction
     }
 
     /**
-     * Extrai dados de um elemento <det> e constrói o ItemDTO correspondente.
-     *
-     * @param  array<int, array{cst: string, cClassTrib: string, ...}>  $rtcPorItem
+     * @param  array<int, array{
+     *     cst: string,
+     *     cClassTrib: string,
+     *     tributacaoRegular?: array{cst: string, cClassTrib: string}|null,
+     *     impostoSeletivo?: array{cst: string, baseCalculo: float, cClassTrib: string, unidade: string, quantidade: float, impostoInformado?: float}|null,
+     * }>  $rtcPorItem
      *
      * @throws RtcValidationException
      */
-    private function processarDetItem(\DOMElement $det, DOMXPath $xpath, array $rtcPorItem): ItemDTO
+    private function processarDetItem(DOMElement $det, DOMXPath $xpath, array $rtcPorItem): ItemDTO
     {
         $nItem = (int) $det->getAttribute('nItem');
 
@@ -165,9 +180,9 @@ class CalcularPorNfeXmlAction
         }
 
         $ncm = (string) $xpath->evaluate('string(nfe:prod/nfe:NCM)', $det);
-        $quantidade = (float) $xpath->evaluate('string(nfe:prod/nfe:qCom)', $det);
-        $uNfe = strtoupper((string) $xpath->evaluate('string(nfe:prod/nfe:uCom)', $det));
-        $baseCalculo = (float) $xpath->evaluate('string(nfe:prod/nfe:vProd)', $det);
+        $quantidade = $this->toFloat($this->evaluateString($xpath, 'string(nfe:prod/nfe:qCom)', $det));
+        $uNfe = strtoupper($this->evaluateString($xpath, 'string(nfe:prod/nfe:uCom)', $det));
+        $baseCalculo = $this->toFloat($this->evaluateString($xpath, 'string(nfe:prod/nfe:vProd)', $det));
 
         $uRtc = self::UNIDADE_MAP[$uNfe] ?? $uNfe;
         $unidade = UnidadeMedida::tryFrom($uRtc) ?? UnidadeMedida::VN;
@@ -180,22 +195,60 @@ class CalcularPorNfeXmlAction
             ->baseCalculo($baseCalculo)
             ->cClassTrib($rtc['cClassTrib']);
 
-        if (array_key_exists('tributacaoRegular', $rtc)) {
-            $item->tributacaoRegular($rtc['tributacaoRegular']['cst'], $rtc['tributacaoRegular']['cClassTrib']);
+        $tributacaoRegular = $rtc['tributacaoRegular'] ?? null;
+
+        if ($tributacaoRegular !== null) {
+            $item->tributacaoRegular($tributacaoRegular['cst'], $tributacaoRegular['cClassTrib']);
         }
 
-        if (array_key_exists('impostoSeletivo', $rtc)) {
-            $is = $rtc['impostoSeletivo'];
+        $impostoSeletivo = $rtc['impostoSeletivo'] ?? null;
+
+        if ($impostoSeletivo !== null) {
             $item->impostoSeletivo(
-                cst: $is['cst'],
-                baseCalculo: (float) $is['baseCalculo'],
-                cClassTrib: $is['cClassTrib'],
-                unidade: UnidadeMedida::from($is['unidade']),
-                quantidade: (float) $is['quantidade'],
-                impostoInformado: (float) ($is['impostoInformado'] ?? 0),
+                cst: $impostoSeletivo['cst'],
+                baseCalculo: $this->toFloat($impostoSeletivo['baseCalculo']),
+                cClassTrib: $impostoSeletivo['cClassTrib'],
+                unidade: UnidadeMedida::from($impostoSeletivo['unidade']),
+                quantidade: $this->toFloat($impostoSeletivo['quantidade']),
+                impostoInformado: $this->toFloat($impostoSeletivo['impostoInformado'] ?? 0.0),
             );
         }
 
         return $item;
+    }
+
+    private function evaluateString(DOMXPath $xpath, string $expression, ?DOMNode $context = null): string
+    {
+        return $context === null
+            ? $this->scalarToString($xpath->evaluate($expression))
+            : $this->scalarToString($xpath->evaluate($expression, $context));
+    }
+
+    private function toFloat(mixed $value): float
+    {
+        if (is_int($value) || is_float($value) || is_string($value)) {
+            return (float) $value;
+        }
+
+        return 0.0;
+    }
+
+    private function scalarToString(mixed $value): string
+    {
+        if (! is_scalar($value)) {
+            return '';
+        }
+
+        return (string) $value;
+    }
+
+    private function queryNodeList(DOMXPath $xpath, string $query): ?DOMNodeList
+    {
+        return $this->toNodeList($xpath->query($query));
+    }
+
+    private function toNodeList(mixed $value): ?DOMNodeList
+    {
+        return $value instanceof DOMNodeList ? $value : null;
     }
 }

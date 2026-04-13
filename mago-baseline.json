@@ -61,12 +61,6 @@ message = "Class has high complexity."
 count = 1
 
 [[issues]]
-file = "src/Http/RtcClient.php"
-code = "halstead"
-message = "Method has a high halstead difficulty"
-count = 2
-
-[[issues]]
 file = "src/Rtc.php"
 code = "too-many-methods"
 message = "Class has too many methods."

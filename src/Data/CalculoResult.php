@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
-use function array_map;
+use function array_keys;
+use function is_array;
 use function json_encode;
 
 /**
@@ -23,6 +24,7 @@ class CalculoResult
 {
     /**
      * @param  ItemResult[]  $objetos
+     * @param  array<string, mixed>  $raw
      */
     public function __construct(
         private array $objetos,
@@ -30,15 +32,22 @@ class CalculoResult
         private array $raw,
     ) {}
 
+    /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
-        $objetos = array_map(ItemResult::fromArray(...), $data['objetos'] ?? []);
+        /** @var ItemResult[] $objetos */
+        $objetos = [];
 
-        $total = TotaisResult::fromArray($data['total'] ?? []);
+        foreach (self::asListOfAssociativeArray($data['objetos'] ?? []) as $objetoRaw) {
+            $objetos[] = ItemResult::fromArray($objetoRaw);
+        }
+
+        $total = TotaisResult::fromArray(self::asAssociativeArray($data['total'] ?? []));
 
         return new self(objetos: $objetos, total: $total, raw: $data);
     }
 
+    /** @return array<string, mixed> */
     public function toArray(): array
     {
         return $this->raw;
@@ -72,5 +81,37 @@ class CalculoResult
         }
 
         return null;
+    }
+
+    /** @return array<string, mixed> */
+    private static function asAssociativeArray(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach (array_keys($value) as $key) {
+            $normalized[(string) $key] = $value[$key];
+        }
+
+        return $normalized;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function asListOfAssociativeArray(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach (array_keys($value) as $key) {
+            $normalized[] = self::asAssociativeArray($value[$key]);
+        }
+
+        return $normalized;
     }
 }

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
+use function array_keys;
+use function data_get;
+use function is_array;
+
 /**
  * Representa os totalizadores do cálculo RTC.
  *
@@ -27,19 +31,30 @@ namespace Crdesign8\LaravelRtcCalculator\Data;
  */
 class TotaisResult
 {
+    /**
+     * @param array<string, mixed> $isTot
+     * @param array<string, mixed> $ibsCbsTot
+     * @param array<string, mixed> $raw
+     */
     public function __construct(
         private array $isTot,
         private array $ibsCbsTot,
         private array $raw,
     ) {}
 
+    /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
-        $tribCalc = $data['tribCalc'] ?? $data;
+        $tribCalc = self::asAssociativeArray(data_get(target: $data, key: 'tribCalc', default: $data));
 
-        return new self(isTot: $tribCalc['ISTot'] ?? [], ibsCbsTot: $tribCalc['IBSCBSTot'] ?? [], raw: $data);
+        $isTot = self::asAssociativeArray(data_get(target: $tribCalc, key: 'ISTot', default: []));
+
+        $ibsCbsTot = self::asAssociativeArray(data_get(target: $tribCalc, key: 'IBSCBSTot', default: []));
+
+        return new self(isTot: $isTot, ibsCbsTot: $ibsCbsTot, raw: $data);
     }
 
+    /** @return array<string, mixed> */
     public function toArray(): array
     {
         return $this->raw;
@@ -49,7 +64,7 @@ class TotaisResult
     // Imposto Seletivo — Total (ISTot)
     // ──────────────────────────────────────────────────────────────────────────
 
-    /** Bloco ISTot completo como array */
+    /** @return array<string, mixed> */
     public function getIsTot(): array
     {
         return $this->isTot;
@@ -57,14 +72,14 @@ class TotaisResult
 
     public function getVIsTot(): string
     {
-        return (string) ($this->isTot['vIS'] ?? '0.00');
+        return (string) data_get(target: $this->isTot, key: 'vIS', default: '0.00');
     }
 
     // ──────────────────────────────────────────────────────────────────────────
     // IBS + CBS — Total (IBSCBSTot)
     // ──────────────────────────────────────────────────────────────────────────
 
-    /** Bloco IBSCBSTot completo como array */
+    /** @return array<string, mixed> */
     public function getIbsCbsTot(): array
     {
         return $this->ibsCbsTot;
@@ -72,31 +87,47 @@ class TotaisResult
 
     public function getVBcIbsCbs(): string
     {
-        return (string) ($this->ibsCbsTot['vBCIBSCBS'] ?? '0.00');
+        return (string) data_get(target: $this->ibsCbsTot, key: 'vBCIBSCBS', default: '0.00');
     }
 
     public function getVIbsTot(): string
     {
-        return (string) ($this->ibsCbsTot['gIBS']['vIBS'] ?? '0.00');
+        return (string) data_get(target: $this->ibsCbsTot, key: 'gIBS.vIBS', default: '0.00');
     }
 
     public function getVIbsUfTot(): string
     {
-        return (string) ($this->ibsCbsTot['gIBS']['gIBSUF']['vIBSUF'] ?? '0.00');
+        return (string) data_get(target: $this->ibsCbsTot, key: 'gIBS.gIBSUF.vIBSUF', default: '0.00');
     }
 
     public function getVIbsMunTot(): string
     {
-        return (string) ($this->ibsCbsTot['gIBS']['gIBSMun']['vIBSMun'] ?? '0.00');
+        return (string) data_get(target: $this->ibsCbsTot, key: 'gIBS.gIBSMun.vIBSMun', default: '0.00');
     }
 
     public function getVCbsTot(): string
     {
-        return (string) ($this->ibsCbsTot['gCBS']['vCBS'] ?? '0.00');
+        return (string) data_get(target: $this->ibsCbsTot, key: 'gCBS.vCBS', default: '0.00');
     }
 
     public function getVCredPresTot(): string
     {
-        return (string) ($this->ibsCbsTot['gIBS']['vCredPres'] ?? '0.00');
+        return (string) data_get(target: $this->ibsCbsTot, key: 'gIBS.vCredPres', default: '0.00');
+    }
+
+    /** @return array<string, mixed> */
+    private static function asAssociativeArray(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach (array_keys($value) as $key) {
+            $normalized[(string) $key] = $value[$key];
+        }
+
+        return $normalized;
     }
 }

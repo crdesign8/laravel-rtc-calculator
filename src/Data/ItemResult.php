@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Crdesign8\LaravelRtcCalculator\Data;
 
-use function array_key_exists;
+use function array_keys;
+use function data_get;
 use function is_array;
+use function is_scalar;
 
 /**
  * Representa um objeto (item calculado) retornado pela calculadora RTC.
@@ -28,6 +30,11 @@ use function is_array;
  */
 class ItemResult
 {
+    /**
+     * @param array<string, mixed> $is
+     * @param array<string, mixed> $ibsCbs
+     * @param array<string, mixed> $raw
+     */
     public function __construct(
         private int $nObj,
         private array $is,
@@ -35,16 +42,22 @@ class ItemResult
         private array $raw,
     ) {}
 
+    /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
+        $tribCalc = self::asAssociativeArray(data_get(target: $data, key: 'tribCalc', default: []));
+        $is = self::asAssociativeArray(data_get(target: $tribCalc, key: 'IS', default: []));
+        $ibsCbs = self::asAssociativeArray(data_get(target: $tribCalc, key: 'IBSCBS', default: []));
+
         return new self(
             nObj: (int) ($data['nObj'] ?? 0),
-            is: $data['tribCalc']['IS'] ?? [],
-            ibsCbs: $data['tribCalc']['IBSCBS'] ?? [],
+            is: $is,
+            ibsCbs: $ibsCbs,
             raw: $data,
         );
     }
 
+    /** @return array<string, mixed> */
     public function toArray(): array
     {
         return $this->raw;
@@ -63,7 +76,7 @@ class ItemResult
     // Imposto Seletivo (IS)
     // ──────────────────────────────────────────────────────────────────────────
 
-    /** Bloco IS completo como array */
+    /** @return array<string, mixed> */
     public function getIs(): array
     {
         return $this->is;
@@ -98,7 +111,7 @@ class ItemResult
     // IBS + CBS (IBSCBS)
     // ──────────────────────────────────────────────────────────────────────────
 
-    /** Bloco IBSCBS completo como array */
+    /** @return array<string, mixed> */
     public function getIbsCbs(): array
     {
         return $this->ibsCbs;
@@ -134,10 +147,10 @@ class ItemResult
         return $this->getIbsCbsNestedField(['gIBSCBS', 'gCBS', 'vCBS'], '0.00');
     }
 
-    /** Bloco gTribRegular como array (pode ser null se CST não tiver tributação regular) */
+    /** @return array<string, mixed>|null */
     public function getTribRegular(): ?array
     {
-        return $this->ibsCbs['gIBSCBS']['gTribRegular'] ?? null;
+        return self::asNullableAssociativeArray(data_get(target: $this->ibsCbs, key: 'gIBSCBS.gTribRegular'));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -146,12 +159,18 @@ class ItemResult
 
     private function getIsField(string $key, string $default = ''): string
     {
-        return (string) ($this->is[$key] ?? $default);
+        /** @var mixed $value */
+        $value = data_get($this->is, $key, $default);
+
+        return $this->stringOrDefault($value, $default);
     }
 
     private function getIbsCbsField(string $key, string $default = ''): string
     {
-        return (string) ($this->ibsCbs[$key] ?? $default);
+        /** @var mixed $value */
+        $value = data_get($this->ibsCbs, $key, $default);
+
+        return $this->stringOrDefault($value, $default);
     }
 
     /**
@@ -159,16 +178,52 @@ class ItemResult
      */
     private function getIbsCbsNestedField(array $keys, string $default = ''): string
     {
-        $node = $this->ibsCbs;
+        $path = \implode(separator: '.', array: $keys);
 
-        foreach ($keys as $key) {
-            if (!is_array($node) || !array_key_exists($key, $node)) {
-                return $default;
-            }
+        /** @var mixed $value */
+        $value = data_get($this->ibsCbs, $path, $default);
 
-            $node = $node[$key];
+        return $this->stringOrDefault($value, $default);
+    }
+
+    private function stringOrDefault(mixed $value, string $default): string
+    {
+        if (! is_scalar($value)) {
+            return $default;
         }
 
-        return (string) $node;
+        return (string) $value;
+    }
+
+    /** @return array<string, mixed> */
+    private static function asAssociativeArray(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach (array_keys($value) as $key) {
+            $normalized[(string) $key] = $value[$key];
+        }
+
+        return $normalized;
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function asNullableAssociativeArray(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $normalized = [];
+
+        foreach (array_keys($value) as $key) {
+            $normalized[(string) $key] = $value[$key];
+        }
+
+        return $normalized;
     }
 }

@@ -13,12 +13,21 @@ use Crdesign8\LaravelRtcCalculator\Exceptions\RtcConnectionException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+
+use function array_key_exists;
+use function array_keys;
+use function is_array;
+use function is_string;
 use function substr;
 
 class RtcClient implements RtcClientContract
 {
+    /**
+     * @param  array{enabled?: bool, channel?: string|null}|array<string, mixed>  $logging
+     */
     public function __construct(
         private readonly string $baseUrl,
         private readonly int $timeout,
@@ -51,15 +60,15 @@ class RtcClient implements RtcClientContract
         if ($response->clientError()) {
             throw new RtcValidationException(
                 "Erro de validação na calculadora RTC: {$response->body()}",
-                errors: (array) ($response->json() ?? []),
+                errors: $this->responseJsonObject($response, fallback: ['message' => $response->body()]),
             );
         }
 
-        if ($response->serverError() || !$response->successful()) {
+        if ($response->serverError() || ! $response->successful()) {
             throw new RtcCalculationException("Erro no cálculo RTC (HTTP {$response->status()}): {$response->body()}");
         }
 
-        return CalculoResult::fromArray((array) $response->json());
+        return CalculoResult::fromArray($this->responseJsonObject($response));
     }
 
     /**
@@ -87,11 +96,11 @@ class RtcClient implements RtcClientContract
         if ($response->clientError()) {
             throw new RtcValidationException(
                 "Erro de validação ao gerar XML RTC: {$response->body()}",
-                errors: (array) ($response->json() ?? []),
+                errors: $this->responseJsonObject($response, fallback: ['message' => $response->body()]),
             );
         }
 
-        if ($response->serverError() || !$response->successful()) {
+        if ($response->serverError() || ! $response->successful()) {
             throw new RtcCalculationException(
                 "Erro ao gerar XML RTC (HTTP {$response->status()}): {$response->body()}",
             );
@@ -123,7 +132,7 @@ class RtcClient implements RtcClientContract
         if ($response->clientError()) {
             throw new RtcValidationException(
                 "XML inválido segundo a calculadora RTC: {$response->body()}",
-                errors: (array) ($response->json() ?? ['message' => $response->body()]),
+                errors: $this->responseJsonObject($response, fallback: ['message' => $response->body()]),
             );
         }
 
@@ -151,13 +160,14 @@ class RtcClient implements RtcClientContract
             ->retry($this->retryTimes, $this->retrySleepMs, throw: false);
     }
 
+    /** @param array<string, mixed> $payload */
     private function logRequest(string $method, string $endpoint, array $payload): void
     {
-        if (!($this->logging['enabled'] ?? false)) {
+        if (($this->logging['enabled'] ?? false) !== true) {
             return;
         }
 
-        Log::channel($this->logging['channel'] ?? 'stack')->debug(
+        Log::channel($this->resolveLogChannel())->debug(
             "RTC Request: {$method} {$this->baseUrl}{$endpoint}",
             ['payload' => $payload],
         );
@@ -165,13 +175,54 @@ class RtcClient implements RtcClientContract
 
     private function logResponse(string $method, string $endpoint, int $status, string $body): void
     {
-        if (!($this->logging['enabled'] ?? false)) {
+        if (($this->logging['enabled'] ?? false) !== true) {
             return;
         }
 
-        Log::channel($this->logging['channel'] ?? 'stack')->debug(
+        Log::channel($this->resolveLogChannel())->debug(
             "RTC Response: {$method} {$this->baseUrl}{$endpoint} [{$status}]",
             ['body' => $body],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $fallback
+     * @return array<string, mixed>
+     */
+    private function responseJsonObject(Response $response, array $fallback = []): array
+    {
+        return $this->asAssociativeArrayOrDefault($response->json(), $fallback);
+    }
+
+    private function resolveLogChannel(): ?string
+    {
+        if (
+            ! array_key_exists('channel', $this->logging)
+            || ! is_string($this->logging['channel'])
+            || $this->logging['channel'] === ''
+        ) {
+            return 'stack';
+        }
+
+        return $this->logging['channel'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $fallback
+     * @return array<string, mixed>
+     */
+    private function asAssociativeArrayOrDefault(mixed $value, array $fallback = []): array
+    {
+        if (! is_array($value)) {
+            return $fallback;
+        }
+
+        $normalized = [];
+
+        foreach (array_keys($value) as $key) {
+            $normalized[(string) $key] = $value[$key];
+        }
+
+        return $normalized;
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\Uf;
+
+use function array_key_exists;
 use function array_map;
 use function now;
 use function strtoupper;
@@ -23,6 +25,9 @@ class CalculoRequestDTO
         private array $itens = [],
     ) {}
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return [
@@ -31,19 +36,34 @@ class CalculoRequestDTO
             'dataHoraEmissao' => $this->dataHoraEmissao,
             'municipio' => $this->municipio,
             'uf' => $this->uf->value,
-            'itens' => array_map(static fn(ItemDTO $item) => $item->toArray(), $this->itens),
+            'itens' => array_map(
+                /** @return array<string, mixed> */
+                static fn (ItemDTO $item): array => $item->toArray(),
+                $this->itens,
+            ),
         ];
     }
 
+    /**
+     * @param array{id: string, versao: string, dataHoraEmissao: string, municipio: int|string, uf: string, itens?: list<array{numero: int|string, ncm: string, quantidade: float|int|string, unidade: string, cst: string, baseCalculo: float|int|string, cClassTrib: string, tributacaoRegular?: array{cst: string, cClassTrib: string}, impostoSeletivo?: array{cst: string, baseCalculo: float|int|string, cClassTrib: string, unidade: string, quantidade: float|int|string, impostoInformado?: float|int|string}}>} $data
+     */
     public static function fromArray(array $data): self
     {
+        $itens = array_key_exists('itens', $data) ? $data['itens'] : [];
+
         return new self(
             id: $data['id'],
             versao: $data['versao'],
             dataHoraEmissao: $data['dataHoraEmissao'],
             municipio: (int) $data['municipio'],
             uf: Uf::from($data['uf']),
-            itens: array_map(ItemDTO::fromArray(...), $data['itens'] ?? []),
+            itens: array_map(
+                /**
+                 * @param array{numero: int|string, ncm: string, quantidade: float|int|string, unidade: string, cst: string, baseCalculo: float|int|string, cClassTrib: string, tributacaoRegular?: array{cst: string, cClassTrib: string}, impostoSeletivo?: array{cst: string, baseCalculo: float|int|string, cClassTrib: string, unidade: string, quantidade: float|int|string, impostoInformado?: float|int|string}} $item
+                 */
+                ItemDTO::fromArray(...),
+                $itens,
+            ),
         );
     }
 

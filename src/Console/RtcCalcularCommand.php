@@ -11,13 +11,15 @@ use Crdesign8\LaravelRtcCalculator\Exceptions\RtcCalculationException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcConnectionException;
 use Crdesign8\LaravelRtcCalculator\Exceptions\RtcValidationException;
 use Illuminate\Console\Command;
+use JsonException;
+
 use function count;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function is_array;
+use function is_string;
 use function json_decode;
-use function json_last_error;
-use function json_last_error_msg;
 use function str_repeat;
 
 class RtcCalcularCommand extends Command
@@ -30,6 +32,7 @@ class RtcCalcularCommand extends Command
 
     public function handle(RtcClientContract $client): int
     {
+        /** @var string $caminho */
         $caminho = $this->argument('arquivo');
 
         if (! file_exists($caminho)) {
@@ -39,32 +42,38 @@ class RtcCalcularCommand extends Command
         }
 
         $json = file_get_contents($caminho);
-        $data = json_decode($json, associative: true);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error('Arquivo JSON inválido: '.json_last_error_msg());
+        if (! is_string($json)) {
+            $this->error("Não foi possível ler o arquivo: {$caminho}");
 
             return self::FAILURE;
         }
+
+        try {
+            /** @var array<array-key, mixed>|bool|float|int|string|null $decoded */
+            $decoded = json_decode($json, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            $this->error('Arquivo JSON inválido: '.$e->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if (! is_array($decoded)) {
+            $this->error('Estrutura JSON inválida para cálculo RTC. Verifique os campos obrigatórios.');
+
+            return self::FAILURE;
+        }
+
+        /** @var array{id: string, versao: string, dataHoraEmissao: string, municipio: int|string, uf: string, itens?: list<array{numero: int|string, ncm: string, quantidade: float|int|string, unidade: string, cst: string, baseCalculo: float|int|string, cClassTrib: string, tributacaoRegular?: array{cst: string, cClassTrib: string}, impostoSeletivo?: array{cst: string, baseCalculo: float|int|string, cClassTrib: string, unidade: string, quantidade: float|int|string, impostoInformado?: float|int|string}}>} $data */
+        $data = $decoded;
 
         $this->info('Calculando tributos RTC...');
 
         try {
             $dto = CalculoRequestDTO::fromArray($data);
             $result = (new CalcularTributosAction($client))->handle($dto);
-        } catch (RtcConnectionException $e) {
-            $this->error('Falha de conexão: '.$e->getMessage());
-
-            return self::FAILURE;
-        } catch (RtcValidationException $e) {
-            $this->error('Erro de validação: '.$e->getMessage());
-            foreach ($e->getErrors() as $err) {
-                $this->line("  • {$err}");
-            }
-
-            return self::FAILURE;
-        } catch (RtcCalculationException $e) {
-            $this->error('Erro no cálculo: '.$e->getMessage());
+        } catch (RtcConnectionException|RtcValidationException|RtcCalculationException $e) {
+            $this->error('Erro no cálculo RTC: '.$e->getMessage());
 
             return self::FAILURE;
         }
@@ -88,8 +97,16 @@ class RtcCalcularCommand extends Command
 
         // Salva em arquivo se solicitado
         $arquivoSaida = $this->option('saida');
-        if ($arquivoSaida !== null) {
-            file_put_contents($arquivoSaida, $result->toJson());
+
+        if (is_string($arquivoSaida) && $arquivoSaida !== '') {
+            $bytes = file_put_contents($arquivoSaida, $result->toJson());
+
+            if ($bytes === false) {
+                $this->error("Falha ao salvar resultado em: {$arquivoSaida}");
+
+                return self::FAILURE;
+            }
+
             $this->info("Resultado salvo em: {$arquivoSaida}");
         }
 

@@ -11,6 +11,9 @@ class TributacaoRegularDTO
         private string $cClassTrib,
     ) {}
 
+    /**
+     * @return array{cst: string, cClassTrib: string}
+     */
     public function toArray(): array
     {
         return [
@@ -19,6 +22,9 @@ class TributacaoRegularDTO
         ];
     }
 
+    /**
+     * @param array{cst: string, cClassTrib: string} $data
+     */
     public static function fromArray(array $data): self
     {
         return new self(cst: $data['cst'], cClassTrib: $data['cClassTrib']);

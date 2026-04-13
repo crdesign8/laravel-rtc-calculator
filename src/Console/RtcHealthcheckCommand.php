@@ -7,6 +7,7 @@ namespace Crdesign8\LaravelRtcCalculator\Console;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+
 use function config;
 
 class RtcHealthcheckCommand extends Command
@@ -18,7 +19,7 @@ class RtcHealthcheckCommand extends Command
 
     public function handle(): int
     {
-        $baseUrl = $this->option('url') ?? config('rtc.base_url', default: 'http://localhost:8080');
+        $baseUrl = (string) ($this->option('url') ?? config('rtc.base_url', default: 'http://localhost:8080'));
         $timeout = (int) config('rtc.timeout', default: 5);
 
         $this->line('Verificando conexão com a calculadora RTC...');
@@ -29,8 +30,7 @@ class RtcHealthcheckCommand extends Command
             $response = Http::baseUrl($baseUrl)->timeout($timeout)->get('/actuator/health');
 
             if ($response->successful()) {
-                $body = $response->json();
-                $status = $body['status'] ?? 'UNKNOWN';
+                $status = (string) ($response->json('status') ?? 'UNKNOWN');
 
                 if ($status === 'UP') {
                     $this->line('<fg=green;options=bold>✔ Calculadora RTC está operacional (status: UP)</>');

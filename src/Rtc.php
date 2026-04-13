@@ -17,6 +17,7 @@ use Crdesign8\LaravelRtcCalculator\Enums\TipoDocumento;
 use Crdesign8\LaravelRtcCalculator\Events\RtcCalculated;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+
 use function app;
 use function event;
 use function file_get_contents;
@@ -185,7 +186,7 @@ class Rtc
      */
     public function injetarNfe(string $xmlRtc, string $xmlNfe): string
     {
-        return (new InjetarXmlNfeAction())->handle($xmlRtc, $xmlNfe);
+        return (new InjetarXmlNfeAction)->handle($xmlRtc, $xmlNfe);
     }
 
     /**
@@ -205,7 +206,12 @@ class Rtc
      *   );
      *
      * @param  string  $xmlNfe     XML da NFe (enviNFe, nfeProc ou infNFe)
-     * @param  array   $rtcPorItem Dados RTC indexados pelo nItem (1-based)
+     * @param  array<int, array{
+     *     cst: string,
+     *     cClassTrib: string,
+     *     tributacaoRegular?: array{cst: string, cClassTrib: string}|null,
+     *     impostoSeletivo?: array{cst: string, baseCalculo: float, cClassTrib: string, unidade: string, quantidade: float, impostoInformado?: float}|null,
+     * }>  $rtcPorItem  Dados RTC indexados pelo nItem (1-based)
      * @param  string  $versao     Versão do layout (padrão: '1.0.0')
      */
     public function calcularPorNfe(string $xmlNfe, array $rtcPorItem, string $versao = '1.0.0'): CalculoResult

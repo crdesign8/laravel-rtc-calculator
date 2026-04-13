@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Crdesign8\LaravelRtcCalculator\DTOs;
 
 use Crdesign8\LaravelRtcCalculator\Enums\UnidadeMedida;
+
 use function array_key_exists;
 
 class ItemDTO
@@ -21,6 +22,9 @@ class ItemDTO
         private ?ImpostoSeletivoDTO $impostoSeletivo = null,
     ) {}
 
+    /**
+     * @return array{numero: int, ncm: string, quantidade: float, unidade: string, cst: string, baseCalculo: float, cClassTrib: string, tributacaoRegular?: array{cst: string, cClassTrib: string}, impostoSeletivo?: array{cst: string, baseCalculo: float, cClassTrib: string, unidade: string, quantidade: float, impostoInformado: float}}
+     */
     public function toArray(): array
     {
         $data = [
@@ -44,8 +48,14 @@ class ItemDTO
         return $data;
     }
 
+    /**
+     * @param array{numero: int|string, ncm: string, quantidade: float|int|string, unidade: string, cst: string, baseCalculo: float|int|string, cClassTrib: string, tributacaoRegular?: array{cst: string, cClassTrib: string}, impostoSeletivo?: array{cst: string, baseCalculo: float|int|string, cClassTrib: string, unidade: string, quantidade: float|int|string, impostoInformado?: float|int|string}} $data
+     */
     public static function fromArray(array $data): self
     {
+        $trRaw = array_key_exists('tributacaoRegular', $data) ? $data['tributacaoRegular'] : null;
+        $isRaw = array_key_exists('impostoSeletivo', $data) ? $data['impostoSeletivo'] : null;
+
         return new self(
             numero: (int) $data['numero'],
             ncm: $data['ncm'],
@@ -54,12 +64,8 @@ class ItemDTO
             cst: $data['cst'],
             baseCalculo: (float) $data['baseCalculo'],
             cClassTrib: $data['cClassTrib'],
-            tributacaoRegular: array_key_exists('tributacaoRegular', $data)
-                ? TributacaoRegularDTO::fromArray($data['tributacaoRegular'])
-                : null,
-            impostoSeletivo: array_key_exists('impostoSeletivo', $data)
-                ? ImpostoSeletivoDTO::fromArray($data['impostoSeletivo'])
-                : null,
+            tributacaoRegular: $trRaw !== null ? TributacaoRegularDTO::fromArray($trRaw) : null,
+            impostoSeletivo: $isRaw !== null ? ImpostoSeletivoDTO::fromArray($isRaw) : null,
         );
     }
 
