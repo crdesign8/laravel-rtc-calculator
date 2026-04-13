@@ -41,34 +41,14 @@ class RtcClient implements RtcClientContract
      */
     public function calcularRegimeGeral(CalculoRequestDTO $dto): CalculoResult
     {
-        $endpoint = '/api/calculadora/regime-geral';
-        $payload = $dto->toArray();
+        $response = $this->performRequest('/api/calculadora/regime-geral', $dto->toArray());
+        $response = $this->assertResponseSuccessful(
+            $response,
+            validationErrorMessage: 'Erro de validação na calculadora RTC',
+            serverErrorMessage: 'Erro no cálculo RTC',
+        );
 
-        $this->logRequest('POST', $endpoint, $payload);
-
-        try {
-            $response = $this->httpClient()->post($endpoint, $payload);
-        } catch (ConnectionException $e) {
-            throw new RtcConnectionException(
-                "Não foi possível conectar à calculadora RTC em {$this->baseUrl}: {$e->getMessage()}",
-                previous: $e,
-            );
-        }
-
-        $this->logResponse('POST', $endpoint, $response->status(), $response->body());
-
-        if ($response->clientError()) {
-            throw new RtcValidationException(
-                "Erro de validação na calculadora RTC: {$response->body()}",
-                errors: $this->responseJsonObject($response, fallback: ['message' => $response->body()]),
-            );
-        }
-
-        if ($response->serverError() || ! $response->successful()) {
-            throw new RtcCalculationException("Erro no cálculo RTC (HTTP {$response->status()}): {$response->body()}");
-        }
-
-        return CalculoResult::fromArray($this->responseJsonObject($response));
+        return CalculoResult::fromArray($this->asAssociativeArrayOrDefault($response->json()));
     }
 
     /**
@@ -76,35 +56,15 @@ class RtcClient implements RtcClientContract
      */
     public function gerarXml(CalculoResult $result, TipoDocumento $tipo): string
     {
-        $endpoint = '/api/calculadora/xml/generate';
-        $url = "{$endpoint}?tipo={$tipo->value}";
-        $payload = $result->toArray();
-
-        $this->logRequest('POST', $url, $payload);
-
-        try {
-            $response = $this->httpClient()->post($url, $payload);
-        } catch (ConnectionException $e) {
-            throw new RtcConnectionException(
-                "Não foi possível conectar à calculadora RTC em {$this->baseUrl}: {$e->getMessage()}",
-                previous: $e,
-            );
-        }
-
-        $this->logResponse('POST', $url, $response->status(), $response->body());
-
-        if ($response->clientError()) {
-            throw new RtcValidationException(
-                "Erro de validação ao gerar XML RTC: {$response->body()}",
-                errors: $this->responseJsonObject($response, fallback: ['message' => $response->body()]),
-            );
-        }
-
-        if ($response->serverError() || ! $response->successful()) {
-            throw new RtcCalculationException(
-                "Erro ao gerar XML RTC (HTTP {$response->status()}): {$response->body()}",
-            );
-        }
+        $response = $this->performRequest(
+            "/api/calculadora/xml/generate?tipo={$tipo->value}",
+            $result->toArray(),
+        );
+        $response = $this->assertResponseSuccessful(
+            $response,
+            validationErrorMessage: 'Erro de validação ao gerar XML RTC',
+            serverErrorMessage: 'Erro ao gerar XML RTC',
+        );
 
         return $response->body();
     }
@@ -114,33 +74,13 @@ class RtcClient implements RtcClientContract
      */
     public function validarXml(string $xml): bool
     {
-        $endpoint = '/api/calculadora/xml/validate';
-
-        $this->logRequest('POST', $endpoint, ['xml_preview' => substr($xml, offset: 0, length: 200)]);
-
-        try {
-            $response = $this->httpClient()->withBody($xml, 'application/xml')->post($endpoint);
-        } catch (ConnectionException $e) {
-            throw new RtcConnectionException(
-                "Não foi possível conectar à calculadora RTC em {$this->baseUrl}: {$e->getMessage()}",
-                previous: $e,
-            );
-        }
-
-        $this->logResponse('POST', $endpoint, $response->status(), $response->body());
-
-        if ($response->clientError()) {
-            throw new RtcValidationException(
-                "XML inválido segundo a calculadora RTC: {$response->body()}",
-                errors: $this->responseJsonObject($response, fallback: ['message' => $response->body()]),
-            );
-        }
-
-        if ($response->serverError()) {
-            throw new RtcConnectionException(
-                "Erro no servidor ao validar XML RTC (HTTP {$response->status()}): {$response->body()}",
-            );
-        }
+        $response = $this->performRequest('/api/calculadora/xml/validate', $xml, 'application/xml');
+        $response = $this->assertResponseSuccessful(
+            $response,
+            validationErrorMessage: 'XML inválido segundo a calculadora RTC',
+            serverErrorMessage: 'Erro no servidor ao validar XML RTC',
+            serverErrorType: 'connection',
+        );
 
         return $response->successful();
     }
@@ -160,6 +100,71 @@ class RtcClient implements RtcClientContract
             ->retry($this->retryTimes, $this->retrySleepMs, throw: false);
     }
 
+    /** @param array<string, mixed>|string $payload */
+    private function performRequest(
+        string $endpoint,
+        array|string $payload,
+        string $contentType = 'application/json',
+    ): Response {
+        $logPayload = is_array($payload)
+            ? $payload
+            : ['xml_preview' => substr($payload, offset: 0, length: 200)];
+
+        $this->logRequest('POST', $endpoint, $logPayload);
+
+        try {
+            $request = $this->httpClient();
+
+            $response = is_array($payload)
+                ? $request->post($endpoint, $payload)
+                : $request->withBody($payload, $contentType)->post($endpoint);
+        } catch (ConnectionException $e) {
+            throw new RtcConnectionException(
+                "Não foi possível conectar à calculadora RTC em {$this->baseUrl}: {$e->getMessage()}",
+                previous: $e,
+            );
+        }
+
+        $this->logResponse('POST', $endpoint, $response->status(), $response->body());
+
+        return $response;
+    }
+
+    private function assertResponseSuccessful(
+        Response $response,
+        string $validationErrorMessage,
+        string $serverErrorMessage,
+        string $serverErrorType = 'calculation',
+    ): Response {
+        if ($response->clientError()) {
+            throw new RtcValidationException(
+                "{$validationErrorMessage}: {$response->body()}",
+                errors: $this->asAssociativeArrayOrDefault($response->json(), fallback: ['message' =>
+                    $response->body()]),
+            );
+        }
+
+        if ($response->serverError()) {
+            if ($serverErrorType === 'connection') {
+                throw new RtcConnectionException(
+                    "{$serverErrorMessage} (HTTP {$response->status()}): {$response->body()}",
+                );
+            }
+
+            throw new RtcCalculationException(
+                "{$serverErrorMessage} (HTTP {$response->status()}): {$response->body()}",
+            );
+        }
+
+        if ($serverErrorType === 'calculation' && ! $response->successful()) {
+            throw new RtcCalculationException(
+                "{$serverErrorMessage} (HTTP {$response->status()}): {$response->body()}",
+            );
+        }
+
+        return $response;
+    }
+
     /** @param array<string, mixed> $payload */
     private function logRequest(string $method, string $endpoint, array $payload): void
     {
@@ -167,7 +172,17 @@ class RtcClient implements RtcClientContract
             return;
         }
 
-        Log::channel($this->resolveLogChannel())->debug(
+        $channel = 'stack';
+
+        if (
+            array_key_exists('channel', $this->logging)
+            && is_string($this->logging['channel'])
+            && $this->logging['channel'] !== ''
+        ) {
+            $channel = $this->logging['channel'];
+        }
+
+        Log::channel($channel)->debug(
             "RTC Request: {$method} {$this->baseUrl}{$endpoint}",
             ['payload' => $payload],
         );
@@ -179,32 +194,20 @@ class RtcClient implements RtcClientContract
             return;
         }
 
-        Log::channel($this->resolveLogChannel())->debug(
+        $channel = 'stack';
+
+        if (
+            array_key_exists('channel', $this->logging)
+            && is_string($this->logging['channel'])
+            && $this->logging['channel'] !== ''
+        ) {
+            $channel = $this->logging['channel'];
+        }
+
+        Log::channel($channel)->debug(
             "RTC Response: {$method} {$this->baseUrl}{$endpoint} [{$status}]",
             ['body' => $body],
         );
-    }
-
-    /**
-     * @param  array<string, mixed>  $fallback
-     * @return array<string, mixed>
-     */
-    private function responseJsonObject(Response $response, array $fallback = []): array
-    {
-        return $this->asAssociativeArrayOrDefault($response->json(), $fallback);
-    }
-
-    private function resolveLogChannel(): ?string
-    {
-        if (
-            ! array_key_exists('channel', $this->logging)
-            || ! is_string($this->logging['channel'])
-            || $this->logging['channel'] === ''
-        ) {
-            return 'stack';
-        }
-
-        return $this->logging['channel'];
     }
 
     /**
